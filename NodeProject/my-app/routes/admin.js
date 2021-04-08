@@ -11,7 +11,7 @@ const getConnection = require("../config/database_config.js").getConnection
 const crypto = require("../config/crypto_config.js")
 const cron = require("node-cron")
 const puppeteer = require("puppeteer")
-
+const upload = require("../config/multer_config.js").upload
 app.use(sessionConfig.init())
 
 /**
@@ -169,18 +169,38 @@ async function contentsCrawling(page) {
         let contents = []
         for (let i = 0; i < linkList.length; i++) {
             await page.goto(linkList[i].link)
-            let temp = await page.$("#oxbbsPrintArea > div > div.note")
-            contents.push({
-                text: await page.evaluate((data) => {
-                    return data.innerHTML
-                }, temp)
-            })
+            let htmlTempData = await page.$("#oxbbsPrintArea > div > div.note")
+            let imgTempData = await page.$("#oxbbsPrintArea > div > div.note > div > a > img")
+
+            let htmlData = await page.evaluate((data) => {
+                return data === null ? null : data.innerHTML
+            }, htmlTempData)
+            let imgData = await page.evaluate((data) => {
+                return data === null ? null : data.src
+            }, imgTempData)
+
+            if (htmlData === null)
+                imgData === null ? contents.push({
+                    htmlData: "empty",
+                    imgData: "empty"
+                }) : contents.push({htmlData: "empty", imgData: imgData})
+            else
+                imgData === null ? contents.push({
+                    htmlData: htmlData,
+                    imgData: "empty"
+                }) : contents.push({htmlData: htmlData, imgData: imgData})
+        }
+
+        for (let i = 0; i < contents.length; i++) {
+            if (contents[i].imgData === "empty")
+                continue
+            contents[i].htmlData = contents[i].htmlData.replace(/src="_/gi, 'src="https://cse.kangwon.ac.kr/_')
         }
 
         getConnection((conn) => {
             let updateSql = ""
             for (let i = 0; i < contents.length; i++)
-                updateSql += "update anno set anno_contents = " + conn.escape(contents[i].text) + " where anno_flag = " + conn.escape(linkList[i].bid) + ";"
+                updateSql += "update anno set anno_contents = " + conn.escape(contents[i].htmlData) + " where anno_flag = " + conn.escape(linkList[i].bid) + ";"
 
             conn.query(updateSql, function (error) {
                 if (error) {
@@ -1065,15 +1085,50 @@ app.post("/point/check", (req, res) => {
 })
 
 // 13. 공지사항 작성
-app.post("/notice/regist", (req, res) => {
-    if (req.session.admin_email === undefined || Object.keys(req.body).length === 0)
+app.post("/notice/regist", upload.any(), (req, res) => {
+    if (req.session.admin_email === undefined || Object.keys(req.files).length === 0 || Object.keys(req.body).length === 0)
         res.status(401).json({
             content: false
         })
     else {
-        let noticeTitle = req.body.notice_title
-        let noticeContents = req.body.notice_contents
+        let insertNoticeSql = "insert into notice(notice_title, notice_contents, notice_date, admin_email, notice_delete) values(?, ? ,?, ?, ?);"
+        let insertNoticeParam = [req.body.notice_title, req.body.notice_contents, new Date(), req.session.admin_email, 0]
+        getConnection((conn) => {
+            conn.query(insertNoticeSql, insertNoticeParam, function (error) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    console.log("insert notice success.")
+                    let insertFileSql = ""
+                    for (let i = 0; i < req.files.length; i++)
+                        insertFileSql += "insert into notice_file_dir(notice_file_name, notice_file_path, notice_id) values(" + conn.escape(req.files[0].originalname) +
+                            ", " + conn.escape(req.files[0].path) + ", " + "(select notice_id from notice where admin_email = " + conn.escape(req.session.admin_email) +
+                            " order by notice_id desc limit " + conn.escape(1) + "));"
+                    conn.query(insertFileSql, function (error) {
+                        if (error) {
+                            console.error(error)
+                            res.status(500).json({
+                                content: "DB Error"
+                            })
+                        } else {
+                            console.log("insert notice file success.")
+                            res.status(200).json({
+                                content: true
+                            })
+                        }
+                    })
+                }
+            })
+        })
     }
+})
+
+// 14. 공지사항 수정
+app.patch("/notice/edit", (req, res) => {
+
 })
 
 // 27. 공고정보 조회(관리자)
@@ -1083,7 +1138,7 @@ app.get('/anno/list', (req, res) => {
             content: false
         })
     else {
-        let searchAnnoSql = "select anno_flag, anno_title, anno_date from anno limit ?"
+        let searchAnnoSql = "select anno_flag, anno_title, anno_date from anno order by anno_flag DESC limit ?"
         let searchAnnoParam = [15]
         getConnection((conn) => {
             conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
@@ -1108,15 +1163,14 @@ app.get('/anno/list', (req, res) => {
 })
 
 // 28. 공고정보 상세 조회(관리자)
-// TODO Get 방식으로 바꿔야 함.
-app.post("/anno/list/detail", (req, res) => {
-    if (req.session.admin_email === undefined || Object.keys(req.body).length === 0)
+app.get("/anno/list/detail", (req, res) => {
+    if (req.session.admin_email === undefined || Object.keys(req.query).length === 0)
         res.status(401).json({
             content: false
         })
     else {
-        let bid = req.body.anno_flag
-        let searchDetailAnnoSql = "select anno_contents from anno where anno_flag = ?"
+        let bid = req.query.bid
+        let searchDetailAnnoSql = "select anno_ref, anno_link, anno_contents from anno where anno_flag = ?"
         let searchDetailAnnoParam = [bid]
         getConnection((conn) => {
             conn.query(searchDetailAnnoSql, searchDetailAnnoParam, function (error, rows) {
@@ -1131,7 +1185,11 @@ app.post("/anno/list/detail", (req, res) => {
                             content: false
                         })
                     else {
-                        res.status(200).json(rows)
+                        res.status(200).json({
+                            ref: rows[0].anno_ref,
+                            link: rows[0].anno_link,
+                            content: rows[0].anno_contents
+                        })
                     }
                 }
             })

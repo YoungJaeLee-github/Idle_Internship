@@ -811,7 +811,6 @@ app.get("/marked", (req, res) => {
                         let annoInfo = []
                         for (let i = 0; i < rows.length; i++) {
                             annoInfo[i] = {
-                                // 공고 번호 1부터 하도록 하기 위해.
                                 "anno_title": rows[i].anno_title,
                                 "anno_date": rows[i].anno_date
                             }

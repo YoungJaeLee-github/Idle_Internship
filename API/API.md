@@ -1,4 +1,4 @@
-### API 개발 진행률 28/70(40%)
+### API 개발 진행률 29/70(41%)
 <table>
 <thead>
 <tr>
@@ -15,7 +15,7 @@
 </tr>
 <tr>
 <td>관리자 API</td>
-<td>14</td>
+<td>15</td>
 <td>31</td>
 </tr>
 <tr>
@@ -613,10 +613,10 @@
 
 ## 공고정보 상세 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/anno/list/detail
-* Method : POST
+* Method : GET
 * URL Params
-    1. Key : anno_flag, Value : 조회할 공고 정보 번호
-* Description : 해당 공고에 대한 상세 내용을 조회
+    1. Key : bid, Value : 조회할 공고 정보 번호
+* Description : 해당 공고에 대한 상세 내용을 조회, front에서 ajax 비동기 통신으로 구현해야 함.
 * Success Response
     1. Code : 200
     2. Content : true
