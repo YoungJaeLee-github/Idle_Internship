@@ -13,6 +13,7 @@ const cron = require("node-cron")
 const puppeteer = require("puppeteer")
 const upload = require("../config/multer_config.js").upload
 const fs = require("fs")
+const logger = require("../config/winston.js").logger
 app.use(sessionConfig.init())
 
 /**
@@ -37,11 +38,13 @@ cron.schedule("00 00 * * 1", function () {
     getConnection((conn) => {
         conn.query(searchPointSql, searchPointParam, function (error, rows, fields) {
             if (error) {
+                logger.error(error)
                 console.error(error)
             } else {
-                if (rows.length === 0)
+                if (rows.length === 0) {
                     console.error(error)
-                else {
+                    logger.error(error)
+                } else {
                     let structForRank = []
                     for (let i = 0; i < rows.length; i++) {
                         structForRank[i] = {
@@ -73,8 +76,10 @@ cron.schedule("00 00 * * 1", function () {
                     conn.query(updateRankSql, function (error, rows, fields) {
                         if (error) {
                             console.error(error)
+                            logger.error(error)
                         } else {
                             console.log("Success Rank update.")
+                            logger.info("Success Rank update.")
                         }
                     })
                 }
@@ -126,14 +131,17 @@ async function listCrawling(page) {
             conn.query(insertSql, function (error) {
                 if (error) {
                     console.error(error)
+                    logger.error(error)
                 } else {
                     console.log("Success Crawling.")
+                    logger.info("Success Crawling.")
                 }
                 conn.release()
             })
         })
     }).catch(error => {
         console.error(error)
+        logger.error(error)
     })
 }
 
@@ -147,9 +155,9 @@ async function getCrawlingUrl() {
                 if (error) {
                     console.error(error)
                 } else {
-                    if (rows.length === 0)
-                        console.error(error)
-                    else {
+                    if (rows.length === 0) {
+                        reject("Not exists announcement there.")
+                    } else {
                         for (let i = 0; i < rows.length; i++)
                             linkList.push({
                                 link: rows[i].anno_link,
@@ -206,15 +214,21 @@ async function contentsCrawling(page) {
             conn.query(updateSql, function (error) {
                 if (error) {
                     console.error(error)
-                } else
+                    logger.error(error)
+                } else {
                     console.log("Insert Contents Success.")
+                    logger.info("Insert Contents Success.")
+                }
                 conn.release()
             })
         })
+    }).catch(error => {
+        console.error(error)
+        logger.error(error)
     })
 }
 
-cron.schedule("00 00 1-31 * *", async function () {
+cron.schedule("42 23 1-31 * *", async function () {
     const browser = await puppeteer.launch({headless: false})
     const page = await browser.newPage()
     await page.setViewport({
@@ -228,7 +242,7 @@ cron.schedule("00 00 1-31 * *", async function () {
     await browser.close()
 })
 
-cron.schedule("01 00 1-31 * *", async function () {
+cron.schedule("43 23 1-31 * *", async function () {
     const browser = await puppeteer.launch({headless: false})
     const page = await browser.newPage()
     await page.setViewport({
@@ -1429,7 +1443,31 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
 })
 
 // 15. 공지사항 삭제
-
+app.delete("/notice/remove", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.notice_id === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let deleteNoticeSql = "update notice set notice_delete = ? where notice_id = ?"
+            let deleteNoticeParam = [1, req.body.notice_id]
+            conn.query(deleteNoticeSql, deleteNoticeParam, function (error) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    console.log("Success Delete notice")
+                    res.status(200).json({
+                        content: true
+                    })
+                }
+            })
+        })
+    }
+})
 
 // 27. 공고정보 조회(관리자)
 app.get('/anno/list', (req, res) => {
