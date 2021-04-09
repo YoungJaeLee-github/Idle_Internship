@@ -1,4 +1,4 @@
-### API 개발 진행률 30/70(43%)
+### API 개발 진행률 31/70(44%)
 <table>
 <thead>
 <tr>
@@ -15,7 +15,7 @@
 </tr>
 <tr>
 <td>관리자 API</td>
-<td>16</td>
+<td>17</td>
 <td>31</td>
 </tr>
 <tr>
@@ -456,7 +456,7 @@
 * Method : DELETE
 * URL Params
     1. Key : notice_id, Value : 공지사항 번호
-* Description : 공지사항 번호 조회후 해당 공지사항 삭제 여부 1로 update / 화면에 보이지 않게 처리
+* Description : 공지사항 번호 조회후 해당 공지사항 삭제 여부 1로 update / 화면에 보이지 않게 처리할 것.
 * Success Response
     1. Code : 200
     2. Content : true
