@@ -196,7 +196,8 @@ app.get('/email-check', (req, res) => {
 // 4. 회원가입
 app.post("/signup", (req, res) => {
     let authKey = req.session.auth_key
-    if (authKey === undefined || Object.keys(req.body).length === 0)
+    if (authKey === undefined || req.body.member_name === undefined || req.body.member_sex === undefined || req.body.member_birth === undefined||
+    req.body.member_company === undefined || req.body.member_state === undefined || req.body.member_pw === undefined || req.body.member_phone === undefined)
         res.status(401).send(false)
     else {
         let memberName = req.body.member_name
@@ -722,7 +723,8 @@ app.post("/update", (req, res) => {
 // 12. 회원정보 수정 상세
 app.patch("/update-detail", (req, res) => {
     let memberEmail = req.session.member_email
-    if (memberEmail === undefined || Object.keys(req.body).length === 0)
+    if (memberEmail === undefined || req.body.member_name === undefined || req.body.member_pw === undefined || req.body.member_sex === undefined ||
+    req.body.member_birth === undefined || req.body.member_phone === undefined || req.body.member_company === undefined || req.body.member_state === undefined)
         res.status(401).send(false)
     else {
         let memberName = req.body.member_name

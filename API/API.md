@@ -1,4 +1,4 @@
-### API 개발 진행률 29/70(41%)
+### API 개발 진행률 30/70(43%)
 <table>
 <thead>
 <tr>
@@ -15,7 +15,7 @@
 </tr>
 <tr>
 <td>관리자 API</td>
-<td>15</td>
+<td>16</td>
 <td>31</td>
 </tr>
 <tr>
@@ -426,7 +426,7 @@
 * URL Params
     1. Key : notice_title, Value : 공지사항 제목
     2. Key : notice_contents, Value : 공지사항 내용
-    3. Key : notice_file, Value : 공지사항 첨부파일
+    3. Key : files, Value : 공지사항 첨부파일
 * Description : 공지사항 작성, 현재 세션의 관리자 이메일, 작성일 기입
 * Success Response
     1. Code : 200
@@ -439,9 +439,10 @@
 * URL : http://{IP}:{PORT}/admin/notice/edit
 * Method : PATCH
 * URL Params
-    1. Key : notice_id, Value : 공고 번호
-    2. Key : notice_title, Value : 공고 제목
-    3. Key : notice_contents, Value : 공고 내용
+    1. Key : notice_id, Value : 공지사항 번호
+    2. Key : notice_title, Value : 공지사항 제목
+    3. Key : notice_contents, Value : 공지사항 내용
+    4. Key : files, Value : 업로드할 첨부파일
 * Description : 공고 번호 조회후 공고 수정, 내부적으로 수정일, 수정전 내용 update
 * Success Response
     1. Code : 200
@@ -567,7 +568,7 @@
 ## 공지사항 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/notice/list
 * Method : GET
-* Description : 공지사항 목록 15개씩 조회
+* Description : 공지사항 목록 15개씩 조회, 삭제 여부 검사
 * Success Response
     1. Code : 200
     2. Content : true
@@ -580,7 +581,7 @@
 * Method : GET
 * URL Params
     1. Key : notice_id, Value : 조회할 공지사항
-* Description : 해당 공지사항 글 상세 조회
+* Description : 해당 공지사항 글 상세 조회, 삭제 여부 검사, 첨부파일 다운로드 시 불가.
 * Success Response
     1. Code : 200
     2. Content : true
@@ -739,7 +740,7 @@
 ## 공지사항 조회(사용자)
 * URL : http://{IP}:{PORT}/notice/list
 * Method : GET
-* Description : 공지사항 목록 15개씩 조회
+* Description : 공지사항 목록 15개씩 조회, 삭제 여부 검사
 * Success Response
     1. Code : 200
     2. Content : true
@@ -752,7 +753,7 @@
 * Method : GET
 * URL Params
     1. Key : notice_id, Value : 조회할 공지사항
-* Description : 해당 공지사항 글 상세 조회
+* Description : 해당 공지사항 글 상세 조회, 삭제 여부 검사, 첨부파일 다운로드 시 불가.
 * Success Response
     1. Code : 200
     2. Content : true

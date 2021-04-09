@@ -12,6 +12,7 @@ const crypto = require("../config/crypto_config.js")
 const cron = require("node-cron")
 const puppeteer = require("puppeteer")
 const upload = require("../config/multer_config.js").upload
+const fs = require("fs")
 app.use(sessionConfig.init())
 
 /**
@@ -316,7 +317,8 @@ app.post('/check', (req, res) => {
 
 // 3. 관리자 등록
 app.post("/signup", (req, res) => {
-    if (Object.keys(req.body).length === 0)
+    if (req.body.admin_email === undefined || req.body.admin_name === undefined || req.body.admin_sex === undefined ||
+        req.body.admin_birth === undefined || req.body.admin_state === undefined || req.body.admin_pw === undefined || req.body.admin_phone === undefined)
         res.status(401).send(false)
     else {
         let adminEmail = req.body.admin_email
@@ -426,7 +428,7 @@ app.post("/signup", (req, res) => {
 
 // 4. 관리자 로그인
 app.post("/login", (req, res) => {
-    if (Object.keys(req.body).length === 0)
+    if (req.body.admin_email === undefined || req.body.admin_pw === undefined)
         res.status(401).send("false")
     else {
         let adminEmail = req.body.admin_email
@@ -498,7 +500,7 @@ app.post("/logout", (req, res) => {
 // 6. 관리자 제외
 app.delete("/secede", (req, res) => {
     let rootEmail = req.session.admin_email
-    if (rootEmail === undefined || Object.keys(req.body).length === 0)
+    if (rootEmail === undefined || req.body.secede_email === undefined || req.body.root_pw === undefined)
         res.status(401).json({
             "content": "Wrong access."
         })
@@ -577,7 +579,7 @@ app.delete("/secede", (req, res) => {
 // 7. 사용자 정지
 app.patch("/member-ban", (req, res) => {
     let adminEmail = req.session.admin_email
-    if (adminEmail === undefined || Object.keys(req.body).length === 0)
+    if (adminEmail === undefined || req.body.member_email === undefined || req.body.member_ban_reason === undefined || req.body.admin_pw === undefined)
         res.status(401).json({
             "content": false
         })
@@ -700,7 +702,7 @@ app.patch("/member-ban", (req, res) => {
 // 8. 사용자 정지 해제
 app.patch("/member-ban-release", (req, res) => {
     let adminEmail = req.session.admin_email
-    if (adminEmail === undefined || Object.keys(req.body).length === 0)
+    if (adminEmail === undefined || req.body.member_email === undefined || req.body.member_ban_reason === undefined || req.body.admin_pw === undefined)
         res.status(401).json({
             "content": false
         })
@@ -844,7 +846,7 @@ app.delete("/idea/remove", (req, res) => {
 
 // 10. 포인트 부여
 app.patch("/point/give", (req, res) => {
-    if (req.session.admin_email === undefined || Object.keys(req.body).length === 0)
+    if (req.session.admin_email === undefined || req.body.idea_id === undefined || req.body.add_point === undefined)
         res.status(401).json({
             "content": false
         })
@@ -936,7 +938,7 @@ app.patch("/point/give", (req, res) => {
 // 11. 포인트 회수
 app.patch("/point/cancel", (req, res) => {
     //idea 테이블 에서 idea id 조회 후 관리자 이메일, 얻은 포인트, 변동일자 업데이트.
-    if (req.session.admin_email === undefined || Object.keys(req.body).length === 0)
+    if (req.session.admin_email === undefined || req.body.idea_id === undefined)
         res.status(401).json({
             "content": false
         })
@@ -1045,7 +1047,7 @@ app.patch("/point/cancel", (req, res) => {
 
 // 12. 포인트 조회
 app.post("/point/check", (req, res) => {
-    if (req.session.admin_email === undefined || Object.keys(req.body).length === 0)
+    if (req.session.admin_email === undefined || req.body.member_email === undefined)
         res.status(401).json({
             "content": false
         })
@@ -1086,50 +1088,348 @@ app.post("/point/check", (req, res) => {
 
 // 13. 공지사항 작성
 app.post("/notice/regist", upload.any(), (req, res) => {
-    if (req.session.admin_email === undefined || Object.keys(req.files).length === 0 || Object.keys(req.body).length === 0)
+    if (req.session.admin_email === undefined || req.body.notice_title === undefined || req.body.notice_contents === undefined) {
+        for (let i = 0; i < req.files.length; i++) {
+            fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+        }
         res.status(401).json({
             content: false
         })
-    else {
-        let insertNoticeSql = "insert into notice(notice_title, notice_contents, notice_date, admin_email, notice_delete) values(?, ? ,?, ?, ?);"
-        let insertNoticeParam = [req.body.notice_title, req.body.notice_contents, new Date(), req.session.admin_email, 0]
+    } else {
         getConnection((conn) => {
-            conn.query(insertNoticeSql, insertNoticeParam, function (error) {
+            let insertNoticeSql = "insert into notice(notice_title, notice_contents, notice_date, admin_email, notice_delete) values(" + conn.escape(req.body.notice_title)
+                + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
+            conn.query(insertNoticeSql, function (error) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    console.log("insert notice success.")
-                    let insertFileSql = ""
-                    for (let i = 0; i < req.files.length; i++)
-                        insertFileSql += "insert into notice_file_dir(notice_file_name, notice_file_path, notice_id) values(" + conn.escape(req.files[0].originalname) +
-                            ", " + conn.escape(req.files[0].path) + ", " + "(select notice_id from notice where admin_email = " + conn.escape(req.session.admin_email) +
-                            " order by notice_id desc limit " + conn.escape(1) + "));"
-                    conn.query(insertFileSql, function (error) {
-                        if (error) {
-                            console.error(error)
-                            res.status(500).json({
-                                content: "DB Error"
-                            })
-                        } else {
-                            console.log("insert notice file success.")
-                            res.status(200).json({
-                                content: true
-                            })
-                        }
-                    })
+                    if (Object.keys(req.files).length === 0) {
+                        console.log("insert notice success.")
+                        res.status(200).json({
+                            content: true
+                        })
+                    } else {
+                        let insertFileSql = ""
+                        for (let i = 0; i < req.files.length; i++)
+                            insertFileSql += "insert into notice_file_dir(notice_file_name, notice_file_path, notice_id) values(" + conn.escape(req.files[i].originalname) +
+                                ", " + conn.escape(req.files[i].path) + ", " + "(select notice_id from notice where admin_email = " + conn.escape(req.session.admin_email) +
+                                " order by notice_id desc limit " + conn.escape(1) + "));"
+                        conn.query(insertFileSql, function (error) {
+                            if (error) {
+                                console.error(error)
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
+                            } else {
+                                console.log("insert notice & file success.")
+                                res.status(200).json({
+                                    content: true
+                                })
+                            }
+                        })
+                    }
                 }
+                conn.release()
             })
         })
     }
 })
 
 // 14. 공지사항 수정
-app.patch("/notice/edit", (req, res) => {
+app.patch("/notice/edit", upload.any(), (req, res) => {
+    if (req.session.admin_email === undefined || req.body.notice_id === undefined || req.body.notice_title === undefined || req.body.notice_contents === undefined) {
+        for (let i = 0; i < req.files.length; i++) {
+            fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+        }
+        res.status(401).json({
+            content: false
+        })
+    } else {
+        getConnection((conn) => {
+            let deleteCheckSql = "select notice_delete from notice where notice_id = ?;"
+            let deleteCheckParam = [req.body.notice_id]
+            conn.query(deleteCheckSql, deleteCheckParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].notice_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let checkLogSql = "select notice_id from notice_log where notice_id = ?;"
+                            let checkLogParam = [req.body.notice_id]
+                            conn.query(checkLogSql, checkLogParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    let fileCheckSql = "select notice_id, notice_file_path from notice_file_dir where notice_id = ?;"
+                                    let fileCheckParam = [req.body.notice_id]
+                                    // 수정을 처음 하는 경우
+                                    if (rows.length === 0) {
+                                        if (Object.keys(req.files).length === 0) {
+                                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0) {
+                                                        // 업로드할 파일도 없고, 기존에 파일이 없는 경우
+                                                        let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title) +
+                                                            ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
+                                                            + "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " +
+                                                            conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ");"
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    } else {
+                                                        // 업로드할 파일이 없고, 기존에 파일이 있는 경우
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            fs.unlink(rows[i].notice_file_path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                        }
 
+                                                        let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) +
+                                                            "; update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " + conn.escape(req.body.notice_contents) +
+                                                            " where notice_id = " + conn.escape(req.body.notice_id) +
+                                                            "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " + conn.escape(new Date()) +
+                                                            ", " + conn.escape(req.session.admin_email) + ");"
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        } else {
+                                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    // 업로드할 파일이 있고, 기존에 파일이 없는 경우
+                                                    if (rows.length === 0) {
+                                                        let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title)
+                                                            + ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        for (let i = 0; i < req.files.length; i++) {
+                                                            editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
+                                                                ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
+                                                        }
+                                                        editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id)
+                                                            + ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.email) + ");"
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    }
+                                                    // 업로드할 파일이 있고, 기존에 파일이 있는 경우
+                                                    else {
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            fs.unlink(rows[i].notice_file_path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                        }
+
+                                                        let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        editTotalSql += "update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " +
+                                                            conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+
+                                                        for (let i = 0; i < req.files.length; i++) {
+                                                            editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
+                                                                ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
+                                                        }
+                                                        editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) +
+                                                            ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ");"
+
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        }
+                                    }
+                                    // 수정을 처음하지 않는 경우
+                                    else {
+                                        if (Object.keys(req.files).length === 0) {
+                                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0) {
+                                                        // 업로드할 파일도 없고, 기존에 파일이 없는 경우
+                                                        let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title) +
+                                                            ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
+                                                            + "; update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    } else {
+                                                        // 업로드할 파일이 없고, 기존에 파일이 있는 경우
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            fs.unlink(rows[i].notice_file_path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                        }
+
+                                                        let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) +
+                                                            "; update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " + conn.escape(req.body.notice_contents) +
+                                                            " where notice_id = " + conn.escape(req.body.notice_id) +
+                                                            "; update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        } else {
+                                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    // 업로드할 파일이 있고, 기존에 파일이 없는 경우
+                                                    if (rows.length === 0) {
+                                                        let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title)
+                                                            + ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        for (let i = 0; i < req.files.length; i++) {
+                                                            editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
+                                                                ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
+                                                        }
+                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    }
+                                                    // 업로드할 파일이 있고, 기존에 파일이 있는 경우
+                                                    else {
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            fs.unlink(rows[i].notice_file_path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                        }
+
+                                                        let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        editTotalSql += "update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " +
+                                                            conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+
+                                                        for (let i = 0; i < req.files.length; i++) {
+                                                            editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
+                                                                ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
+                                                        }
+                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+
+                                                        conn.query(editTotalSql, function (error) {
+                                                            if (error) {
+                                                                console.error(error)
+                                                                res.status(500).json({
+                                                                    content: "DB Error"
+                                                                })
+                                                            } else {
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
 })
+
+// 14. 공지사항 삭제
+
 
 // 27. 공고정보 조회(관리자)
 app.get('/anno/list', (req, res) => {
@@ -1164,7 +1464,7 @@ app.get('/anno/list', (req, res) => {
 
 // 28. 공고정보 상세 조회(관리자)
 app.get("/anno/list/detail", (req, res) => {
-    if (req.session.admin_email === undefined || Object.keys(req.query).length === 0)
+    if (req.session.admin_email === undefined || req.query.bid === undefined)
         res.status(401).json({
             content: false
         })
@@ -1196,6 +1496,5 @@ app.get("/anno/list/detail", (req, res) => {
         })
     }
 })
-
 
 module.exports = app;
