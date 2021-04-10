@@ -1,4 +1,4 @@
-### API 개발 진행률 31/70(44%)
+### API 개발 진행률 33/70(47%)
 <table>
 <thead>
 <tr>
@@ -15,7 +15,7 @@
 </tr>
 <tr>
 <td>관리자 API</td>
-<td>17</td>
+<td>19</td>
 <td>31</td>
 </tr>
 <tr>
@@ -366,8 +366,8 @@
 * URL : http://{IP}:{PORT}/admin/idea/remove
 * Method : DELETE
 * URL Params
-    1. Key : idea_title, Value : 삭제할 아이디어의 제목
-* Description : 아이디어 테이블에서 아이디어 제목 조회 후 해당 내용 삭제 여부 1로 update, 관리자 이메일 저장 / 화면에 보이지 않게 처리
+    1. Key : idea_id, Value : 삭제할 아이디어의 번호
+* Description : 아이디어 테이블에서 아이디어 번호 조회 후 해당 내용 삭제 여부 1로 update, 관리자 이메일 저장 / 화면에 보이지 않게 처리
 * Success Response
     1. Code : 200
     2. Content : true
@@ -464,13 +464,13 @@
     1. Code : 400
     2. Content : false
 
-## 문의글 답변 작성
+## 문의글 답변 작성/수정
 * URL : http://{IP}:{PORT}/admin/cs/resp/regist
 * Method : POST
 * URL Params
     1. Key : cs_id, Value : 문의글 번호
     2. Key : cd_resp, Value : 문의글 답변 내용
-* Description : 문의글 번호 조회 후, 답변 내용 기입, 답변 작성일 update
+* Description : 문의글 번호 조회 후, 답변 내용/작성일 기입.
 * Success Response
     1. Code : 200
     2. Content : true
@@ -494,7 +494,7 @@
 ## 아이디어 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/idea/list
 * Method : GET
-* Description : 관리자는 아이디어 제목 전체를 15개씩 볼 수 있으며, 참여자 포인트 순위도 10위 까지 볼 수 있음
+* Description : 관리자는 아이디어 제목 전체를 15개씩 볼 수 있으며, 참여자 포인트 순위도 10위 까지 볼 수 있음, 삭제여부 확인.
 * Success Response
     1. Code : 200
     2. Content : true
@@ -507,7 +507,7 @@
 * Method : GET
 * URL Params
     1. Key : idea_id, Value : 조회할 아이디어 번호
-* Description : 해당 아이디어 글 상세 조회
+* Description : 해당 아이디어 글 상세 조회, 삭제 여부 확인, 첨부파일 다운로드.
 * Success Response
     1. Code : 200
     2. Content : true
@@ -544,7 +544,7 @@
 * Method : GET
 * URL Params
     1. Key : cs_id, Value : 문의글 번호
-* Description : 문의글 제목 클릭시 해당 문의글 상세 정보 조회
+* Description : 문의글 제목 클릭시 해당 문의글 상세 정보 조회, 삭제된 문의글은 첨부파일 다운로드 불가.
 * Success Response
     1. Code : 200
     2. Content : true
@@ -699,7 +699,7 @@
 * Method : GET
 * URL Params
     1. Key : cs_id, Value : 문의글 번호
-* Description : 문의글 제목 클릭시 해당 문의글 상세 정보 조회
+* Description : 문의글 제목 클릭시 해당 문의글 상세 정보 조회, 삭제된 문의글은 볼 수 없으며, 첨부파일 다운로드 불가능.
 * Success Response
     1. Code : 200
     2. Content : true
@@ -715,7 +715,7 @@
     2. Key : cs_title, Value : 수정할 제목
     3. Key : cs_secret, Value : 비밀글 여부
     4. Key : cs_file, Value : 첨부파일
-* Description : 문의글 수정/수정일, 수정 전 내용 DB에 저장
+* Description : 문의글 수정/수정일 저장.
 * Success Response
     1. Code : 200
     2. Content : true

@@ -18,7 +18,7 @@ app.use(sessionConfig.init())
 
 /**
  * --------------------------------------------------------------------------------------------------------
- * Rank Scheduler
+ * Rank Scheduler 00 00 * * 1 매주 월요일 00 시 00분.
  * --------------------------------------------------------------------------------------------------------
  */
 cron.schedule("00 00 * * 1", function () {
@@ -808,16 +808,15 @@ app.patch("/member-ban-release", (req, res) => {
 
 // 9. 아이디어 삭제
 app.delete("/idea/remove", (req, res) => {
-    let ideaTitle = req.body.idea_title
-    if (ideaTitle === undefined || req.session.admin_email === undefined)
+    if (req.body.idea_id === undefined || req.session.admin_email === undefined)
         res.status(401).json({
             "content": false
         })
     else {
-        let searchIdeaSql = "select idea_title, idea_delete from idea where idea_title = ?;"
-        let searchIdeaParam = [ideaTitle]
-        let updateIdeaSql = "update idea set idea_delete = ?, admin_email = ? where idea_title = ?;"
-        let updateIdeaParam = [1, req.session.admin_email, ideaTitle]
+        let searchIdeaSql = "select idea_delete from idea where idea_id = ?;"
+        let searchIdeaParam = [req.body.idea_id]
+        let updateIdeaSql = "update idea set idea_delete = ?, admin_email = ? where idea_id = ?;"
+        let updateIdeaParam = [1, req.session.admin_email, req.body.idea_id]
         getConnection((conn) => {
             conn.query(searchIdeaSql, searchIdeaParam, function (error, rows, fields) {
                 if (error) {
@@ -1450,20 +1449,180 @@ app.delete("/notice/remove", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let deleteNoticeSql = "update notice set notice_delete = ? where notice_id = ?"
-            let deleteNoticeParam = [1, req.body.notice_id]
-            conn.query(deleteNoticeSql, deleteNoticeParam, function (error) {
+            let checkNoticeSql = "select notice_delete from notice where notice_id = ?"
+            let checkNoticeParam = [req.body.notice_id]
+            conn.query(checkNoticeSql, checkNoticeParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    console.log("Success Delete notice")
-                    res.status(200).json({
-                        content: true
-                    })
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].notice_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let deleteNoticeSql = "update notice set notice_delete = ? where notice_id = ?"
+                            let deleteNoticeParam = [1, req.body.notice_id]
+                            conn.query(deleteNoticeSql, deleteNoticeParam, function (error) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    console.log("Success Delete notice")
+                                    res.status(200).json({
+                                        content: true
+                                    })
+                                }
+                            })
+                        }
+                    }
                 }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 16. 문의글 답변 작성/수정
+app.post("/cs/resp/regist", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.cs_id === undefined || req.body.cs_resp === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let checkCsSql = "select cs_delete from cs where cs_id = ?"
+            let checkCsParam = [req.body.cs_id]
+            conn.query(checkCsSql, checkCsParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    // 존재하는 문의글인지 검사.
+                    if (rows.length === 0) {
+                        res.status(401).json({
+                            content: false
+                        })
+                    } else {
+                        // 삭제 여부 검사.
+                        if (rows[0].cs_delete === 1) {
+                            res.status(401).json({
+                                content: false
+                            })
+                        } else {
+                            let updateCsRespSql = "update cs set admin_email = ?, cs_resp = ?, cs_resp_date = ? where cs_id = ?"
+                            let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', new Date(), req.body.cs_id]
+                            conn.query(updateCsRespSql, updateCsRespParam, function (error) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    console.log("Success update cs response.")
+                                    res.status(200).json({
+                                        content: true
+                                    })
+                                }
+                            })
+                        }
+                    }
+                }
+            })
+        })
+    }
+})
+
+// 17. 문의글 삭제
+app.delete("/cs/remove", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.cs_id === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let checkCsSql = "select cs_delete from cs where cs_id = ?"
+            let checkCsParam = [req.body.cs_id]
+            conn.query(checkCsSql, checkCsParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].cs_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let deleteCsSql = "update cs set cs_delete = ? where cs_id = ?"
+                            let deleteCsParam = [1, req.body.cs_id]
+                            conn.query(deleteCsSql, deleteCsParam, function (error) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    console.log("Success Delete cs")
+                                    res.status(200).json({
+                                        content: true
+                                    })
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 18. 아이디어 조회(관리자)
+app.get("/idea/list", (req, res) => {
+    if (req.session.admin_email === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchIdeaSql = "select idea_title, idea_date from idea join member where idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? and idea_delete != ? order by idea_id desc limit ?;"
+            let searchIdeaParam = [1, 1, 1, 15]
+            let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
+            let searchRankParam = [1, 1, 10]
+            conn.query(searchRankSql, searchRankParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+
+                    }
+                }
+                conn.release()
             })
         })
     }
