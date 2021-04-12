@@ -763,7 +763,7 @@
 
 ## 문의글 첨부파일 다운로드(사용자)
 * URL : http://{IP}:{PORT}/cs/download
-* Method : GET
+* Method : POST
 * URL Params
   1. Key : cs_id, Value : 문의글 번호
   2. Key : cs_file_name, Value : 문의글 파일 이름
