@@ -3,8 +3,9 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-const membersRouter = require('./routes/member.js')
-const adminsRouter = require('./routes/admin.js')
+const memberRouter = require('./routes/member.js')
+const adminRouter = require('./routes/admin.js')
+const csRouter = require('./routes/cs.js')
 const app = express();
 
 // let indexRouter = require('./routes/index');
@@ -19,8 +20,9 @@ app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/member', membersRouter)
-app.use('/admin', adminsRouter)
+app.use('/member', memberRouter)
+app.use('/admin', adminRouter)
+app.use('/cs', csRouter)
 app.use(express.json())
 // app.use('/', indexRouter);
 // app.use('/users', usersRouter);
