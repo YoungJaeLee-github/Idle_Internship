@@ -15,13 +15,14 @@ const mailer = require("../config/mail_config.js")
  * 이메일 인증 메일 발송 함수
  * @param receiverEmail : 수신 이메일
  * @param contents : string url
+ * @param mailTitle
  */
-async function sendEmail(receiverEmail, contents) {
+async function sendEmail(receiverEmail, contents, mailTitle) {
     return await new Promise((resolve, reject) => {
         resolve({
             from: mailer.senderEmail(),
             to: receiverEmail,
-            subject: "[idea platform] Regarding email authentication.",
+            subject: mailTitle,
             text: contents
         })
     })

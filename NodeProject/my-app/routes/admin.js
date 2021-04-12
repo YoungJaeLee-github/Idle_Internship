@@ -13,7 +13,10 @@ const cron = require("node-cron")
 const puppeteer = require("puppeteer")
 const upload = require("../config/multer_config.js").upload
 const fs = require("fs")
-const logger = require("../config/winston.js").logger
+const path = require("path")
+const logger = require("../config/winston_config.js").logger
+const mailer = require("../config/mail_config.js")
+const transporter = mailer.init()
 app.use(sessionConfig.init())
 
 /**
@@ -1539,6 +1542,7 @@ app.post("/cs/resp/regist", (req, res) => {
                         }
                     }
                 }
+                conn.release()
             })
         })
     }
@@ -1619,7 +1623,40 @@ app.get("/idea/list", (req, res) => {
                             content: false
                         })
                     else {
-
+                        let rankStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            rankStruct.push({
+                                member_rank: rows[i].member_rank,
+                                member_name: rows[i].member_name,
+                                save_point: rows[i].save_point
+                            })
+                        }
+                        conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                            if (error) {
+                                console.error(error)
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
+                            } else {
+                                if (rows.length === 0)
+                                    res.status(401).json({
+                                        content: false
+                                    })
+                                else {
+                                    let ideaStruct = []
+                                    for (let i = 0; i < rows.length; i++) {
+                                        ideaStruct.push({
+                                            idea_title: rows[i].idea_title,
+                                            idea_date: rows[i].idea_date
+                                        })
+                                    }
+                                    res.status(200).json({
+                                        ideaStruct,
+                                        rankStruct
+                                    })
+                                }
+                            }
+                        })
                     }
                 }
                 conn.release()
@@ -1628,8 +1665,487 @@ app.get("/idea/list", (req, res) => {
     }
 })
 
-// 27. 공고정보 조회(관리자)
-app.get('/anno/list', (req, res) => {
+// 19. 아이디어 상세 조회(관리자)
+app.get("/idea/detail", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.idea_id === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchDeleteSql = "select idea_delete from idea join member where idea.member_email = member.member_email and member_secede != ? and member_ban != ? and idea_id = ?"
+            let searchDeleteParam = [1, 1, req.query.idea_id]
+            conn.query(searchDeleteSql, searchDeleteParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].idea_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let fileCheckSql = "select idea_file_name from idea_file_dir where idea_id = ?"
+                            let fileCheckParam = [req.query.idea_id]
+                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    let getIdeaDetailParam = [req.query.idea_id]
+                                    if (rows.length === 0) {
+                                        let getIdeaDetailSql = "select idea_title, idea_contents, idea_date, member.member_name from idea join member where idea.member_email = member.member_email and idea_id = ?;"
+                                        conn.query(getIdeaDetailSql, getIdeaDetailParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0)
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                else {
+                                                    let ideaDetailStruct = []
+                                                    ideaDetailStruct.push({
+                                                        idea_title: rows[0].idea_title,
+                                                        idea_contents: rows[0].idea_contents,
+                                                        idea_date: rows[0].idea_date,
+                                                        member_name: rows[0].member_name
+                                                    })
+                                                    res.status(200).json({
+                                                        ideaDetailStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    } else {
+                                        let getIdeaDetailSql = "select idea_title, idea_contents, idea_date, member.member_name, idea_file_dir.idea_file_name from idea join member join idea_file_dir where idea.member_email = member.member_email and idea.idea_id = idea_file_dir.idea_id and idea.idea_id = ?;"
+                                        conn.query(getIdeaDetailSql, getIdeaDetailParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0)
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                else {
+                                                    let ideaDetailStruct = []
+                                                    for (let i = 0; i < rows.length; i++) {
+                                                        ideaDetailStruct.push({
+                                                            idea_title: rows[i].idea_title,
+                                                            idea_contents: rows[i].idea_contents,
+                                                            idea_date: rows[i].idea_date,
+                                                            member_name: rows[i].member_name,
+                                                            file_name: rows[i].idea_file_name
+                                                        })
+                                                    }
+                                                    res.status(200).json({
+                                                        ideaDetailStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 20. 아이디어 첨부파일 다운로드(관리자)
+app.post("/idea/download", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.idea_id === undefined || req.body.idea_file_name === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchDeleteSql = "select idea_delete from idea join member where idea.member_email = member.member_email and member_secede != ? and member_ban != ? and idea_id = ?"
+            let searchDeleteParam = [1, 1, req.body.idea_id]
+            conn.query(searchDeleteSql, searchDeleteParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: false
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].idea_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let fileCheckSql = "select idea_file_path from idea_file_dir where idea_file_name = ? and idea_id = ?"
+                            let fileCheckParam = [req.body.idea_file_name, req.body.idea_id]
+                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let file = rows[0].idea_file_path
+                                        try {
+                                            if (fs.existsSync(file)) {
+                                                let fileName = path.basename(file)
+                                                res.status(200).setHeader("Content-disposition", "attachment; filename=" + fileName)
+                                                let fileStream = fs.createReadStream(file)
+                                                fileStream.pipe(res)
+                                            } else {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            }
+                                        } catch (error) {
+                                            console.error(error)
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 21. 아이디어 검색(관리자)
+app.get("/idea/search-title", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.idea_title === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchIdeaSql = "select idea_title, idea_date\n" +
+                "from idea join member\n" +
+                "where match(idea_title) against(? in boolean mode) and idea_delete != ? and idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? order by idea_id desc limit ?;"
+            let searchIdeaParam = [req.query.idea_title, 1, 1, 1, 15]
+            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0) {
+                        res.status(401).json({
+                            content: false
+                        })
+                    } else {
+                        let ideaStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            ideaStruct.push({
+                                idea_title: rows[i].idea_title,
+                                idea_date: rows[i].idea_date
+                            })
+                        }
+                        res.status(200).json({
+                            ideaStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 22. 문의글 조회(관리자)
+app.get("/cs/list", (req, res) => {
+    if (req.session.admin_email === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchCsSql = "select cs_title, cs_date from cs join member where cs.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? and cs_delete != ? order by cs_id desc limit ?;"
+            let searchCsParam = [1, 1, 1, 15]
+            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        let csStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            csStruct.push({
+                                cs_title: rows[i].cs_title,
+                                cs_date: rows[i].cs_date
+                            })
+                        }
+                        res.status(200).json({
+                            csStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 23. 문의글 상세 조회(관리자)
+app.get("/cs/detail", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.cs_id === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchDeleteSql = "select cs_delete from cs join member where cs.member_email = member.member_email and member_secede != ? and member_ban != ? and cs_id = ?"
+            let searchDeleteParam = [1, 1, req.query.cs_id]
+            conn.query(searchDeleteSql, searchDeleteParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].cs_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let fileCheckSql = "select cs_file_name from cs_file_dir where cs_id = ?"
+                            let fileCheckParam = [req.query.cs_id]
+                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    let getCsDetailParam = [req.query.cs_id]
+                                    if (rows.length === 0) {
+                                        let getCsDetailSql = "select cs_title, cs_contents, cs_date, member.member_name from cs join member where cs.member_email = member.member_email and cs_id = ?;"
+                                        conn.query(getCsDetailSql, getCsDetailParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0)
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                else {
+                                                    let csDetailStruct = []
+                                                    csDetailStruct.push({
+                                                        cs_title: rows[0].cs_title,
+                                                        cs_contents: rows[0].cs_contents,
+                                                        cs_date: rows[0].cs_date,
+                                                        member_name: rows[0].member_name
+                                                    })
+                                                    res.status(200).json({
+                                                        csDetailStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    } else {
+                                        let getCsDetailSql = "select cs_title, cs_contents, cs_date, member.member_name, cs_file_dir.cs_file_name from cs join member join cs_file_dir where cs.member_email = member.member_email and cs.cs_id = cs_file_dir.cs_id and cs.cs_id = ?;"
+                                        conn.query(getCsDetailSql, getCsDetailParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0)
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                else {
+                                                    let csDetailStruct = []
+                                                    for (let i = 0; i < rows.length; i++) {
+                                                        csDetailStruct.push({
+                                                            cs_title: rows[i].cs_title,
+                                                            cs_contents: rows[i].cs_contents,
+                                                            cs_date: rows[i].cs_date,
+                                                            member_name: rows[i].member_name,
+                                                            file_name: rows[i].cs_file_name
+                                                        })
+                                                    }
+
+                                                    res.status(200).json({
+                                                        csDetailStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 24. 문의글 첨부파일 다운로드(관리자)
+app.post("/cs/download", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.cs_id === undefined || req.body.cs_file_name === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchDeleteSql = "select cs_delete from cs join member where cs.member_email = member.member_email and member_secede != ? and member_ban != ? and cs_id = ?"
+            let searchDeleteParam = [1, 1, req.body.cs_id]
+            conn.query(searchDeleteSql, searchDeleteParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: false
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].cs_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let fileCheckSql = "select cs_file_path from cs_file_dir where cs_file_name = ? and cs_id = ?"
+                            let fileCheckParam = [req.body.cs_file_name, req.body.cs_id]
+                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let file = rows[0].cs_file_path
+                                        try {
+                                            if (fs.existsSync(file)) {
+                                                let fileName = path.basename(file)
+                                                res.status(200).setHeader("Content-disposition", "attachment; filename=" + fileName)
+                                                let fileStream = fs.createReadStream(file)
+                                                fileStream.pipe(res)
+                                            } else {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            }
+                                        } catch (error) {
+                                            console.error(error)
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 25. 문의글 검색(관리자)
+app.get("/cs/search-title", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.cs_title === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchCsSql = "select cs_title, cs_date\n" +
+                "from cs join member\n" +
+                "where match(cs_title) against(? in boolean mode) and cs_delete != ? and cs.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? order by cs_id desc limit ?;"
+            let searchCsParam = [req.query.cs_title, 1, 1, 1, 15]
+            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0) {
+                        res.status(401).json({
+                            content: false
+                        })
+                    } else {
+                        let csStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            csStruct.push({
+                                cs_title: rows[i].cs_title,
+                                cs_date: rows[i].cs_date
+                            })
+                        }
+                        res.status(200).json({
+                            csStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 26. 공고정보 조회(관리자)
+app.get("/anno/list", (req, res) => {
     if (req.session.admin_email === undefined)
         res.status(401).json({
             content: false
@@ -1650,7 +2166,17 @@ app.get('/anno/list', (req, res) => {
                             content: false
                         })
                     else {
-                        res.status(200).json(rows)
+                        let annoStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            annoStruct.push({
+                                anno_flag: rows[i].anno_flag,
+                                anno_title: rows[i].anno_title,
+                                anno_date: rows[i].anno_date
+                            })
+                        }
+                        res.status(200).json({
+                            annoStruct
+                        })
                     }
                 }
                 conn.release()
@@ -1659,7 +2185,7 @@ app.get('/anno/list', (req, res) => {
     }
 })
 
-// 28. 공고정보 상세 조회(관리자)
+// 27. 공고정보 상세 조회(관리자)
 app.get("/anno/list/detail", (req, res) => {
     if (req.session.admin_email === undefined || req.query.bid === undefined)
         res.status(401).json({
@@ -1689,6 +2215,445 @@ app.get("/anno/list/detail", (req, res) => {
                         })
                     }
                 }
+            })
+            conn.release()
+        })
+    }
+})
+
+// 28. 공고정보 검색(관리자)
+app.get("/anno/search-title", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.anno_title === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchAnnoSql = "select anno_title, anno_date\n" +
+                "from anno\n" +
+                "where match(anno_title) against(? in boolean mode) order by anno_id desc limit ?;"
+            let searchAnnoParam = [req.query.anno_title, 15]
+            conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0) {
+                        res.status(401).json({
+                            content: false
+                        })
+                    } else {
+                        let annoStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            annoStruct.push({
+                                anno_title: rows[i].anno_title,
+                                anno_date: rows[i].anno_date
+                            })
+                        }
+                        res.status(200).json({
+                            annoStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 29. 공지사항 조회(관리자)
+app.get("/notice/list", (req, res) => {
+    if (req.session.admin_email === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchNoticeSql = "select notice_title, notice_date from notice where notice_delete != ? order by notice_id desc limit ?;"
+            let searchNoticeParam = [1, 15]
+            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        let noticeStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            noticeStruct.push({
+                                notice_title: rows[i].notice_title,
+                                notice_date: rows[i].notice_date
+                            })
+                        }
+                        res.status(200).json({
+                            noticeStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 30. 공지사항 상세 조회(관리자)
+app.get("/notice/detail", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.notice_id === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchDeleteSql = "select notice_delete from notice where notice_id = ?"
+            let searchDeleteParam = [req.query.notice_id]
+            conn.query(searchDeleteSql, searchDeleteParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].notice_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let fileCheckSql = "select notice_file_name from notice_file_dir where notice_id = ?"
+                            let fileCheckParam = [req.query.notice_id]
+                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    let getNoticeDetailParam = [req.query.notice_id]
+                                    if (rows.length === 0) {
+                                        let getNoticeDetailSql = "select notice_title, notice_contents, notice_date, admin.admin_name from notice join admin where notice.admin_email = admin.admin_email and notice_id = ?;"
+                                        conn.query(getNoticeDetailSql, getNoticeDetailParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0)
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                else {
+                                                    let noticeDetailStruct = []
+                                                    noticeDetailStruct.push({
+                                                        notice_title: rows[0].notice_title,
+                                                        notice_contents: rows[0].notice_contents,
+                                                        notice_date: rows[0].notice_date,
+                                                        admin_name: rows[0].admin_name
+                                                    })
+                                                    res.status(200).json({
+                                                        noticeDetailStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    } else {
+                                        let getNoticeDetailSql = "select notice_title, notice_contents, notice_date, admin.admin_name, notice_file_dir.notice_file_name from notice join admin join notice_file_dir where notice.admin_email = admin.admin_email and notice.notice_id = notice_file_dir.notice_id and notice.notice_id = ?;"
+                                        conn.query(getNoticeDetailSql, getNoticeDetailParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0)
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                else {
+                                                    let noticeDetailStruct = []
+                                                    for (let i = 0; i < rows.length; i++) {
+                                                        noticeDetailStruct.push({
+                                                            notice_title: rows[i].notice_title,
+                                                            notice_contents: rows[i].notice_contents,
+                                                            notice_date: rows[i].notice_date,
+                                                            admin_name: rows[i].admin_name,
+                                                            file_name: rows[i].notice_file_name
+                                                        })
+                                                    }
+
+                                                    res.status(200).json({
+                                                        noticeDetailStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 31. 공지사항 첨부파일 다운로드(관리자)
+app.post("/notice/download", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.notice_id === undefined || req.body.notice_file_name === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchDeleteSql = "select notice_delete from notice where notice_id = ?"
+            let searchDeleteParam = [req.body.notice_id]
+            conn.query(searchDeleteSql, searchDeleteParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: false
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].notice_delete === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let fileCheckSql = "select notice_file_path from notice_file_dir where notice_file_name = ? and notice_id = ?"
+                            let fileCheckParam = [req.body.notice_file_name, req.body.notice_id]
+                            conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let file = rows[0].notice_file_path
+                                        try {
+                                            if (fs.existsSync(file)) {
+                                                let fileName = path.basename(file)
+                                                res.status(200).setHeader("Content-disposition", "attachment; filename=" + fileName)
+                                                let fileStream = fs.createReadStream(file)
+                                                fileStream.pipe(res)
+                                            } else {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            }
+                                        } catch (error) {
+                                            console.error(error)
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 32. 공지사항 검색(관리자)
+app.get("/notice/search-title", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.notice_title === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchNoticeSql = "select notice_title, notice_date\n" +
+                "from notice\n" +
+                "where match(notice_title) against(? in boolean mode) and notice_delete != ? order by notice_id desc limit ?;"
+            let searchNoticeParam = [req.query.notice_title, 1, 15]
+            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0) {
+                        res.status(401).json({
+                            content: false
+                        })
+                    } else {
+                        let noticeStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            noticeStruct.push({
+                                notice_title: rows[i].notice_title,
+                                notice_date: rows[i].notice_date
+                            })
+                        }
+                        res.status(200).json({
+                            noticeStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 33. 고객센터 관련 정보 조회
+app.get("/contact/list", (req, res) => {
+    if (req.session.admin_email === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchContactSql = "select contact_title, contact_log.contact_send from contact join contact_log where contact.contact_id = contact_log.contact_id order by contact.contact_id desc limit ?;"
+            let searchContactParam = [15]
+            conn.query(searchContactSql, searchContactParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        let contactStruct = []
+                        for (let i = 0; i < rows.length; i++) {
+                            contactStruct.push({
+                                contact_title: rows[i].contact_title,
+                                contact_date: rows[i].notice_date
+                            })
+                        }
+                        res.status(200).json({
+                            contactStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 34. 고객센터 관련 정보 상세 조회
+app.get("/contact/detail", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.contact_id === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchContactSql = "select email, contact_title, contact_contents, contact_log.contact_send from contact join contact_log where contact.contact_id = contact_log.contact_id and contact.contact_id = ?"
+            let searchContactParam = [req.query.contact_id]
+            conn.query(searchContactSql, searchContactParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        let contactStruct = []
+                        contactStruct.push({
+                            email: rows[0].email,
+                            contact_title: rows[0].contact_title,
+                            contact_contents: rows[0].contact_contents,
+                            contact_send: rows[0].contact_send
+                        })
+                        res.status(200).json({
+                            contactStruct
+                        })
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 35. 고객센터 답변
+app.post("/contact/resp", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.contact_id === undefined || req.body.contact_resp_title === undefined || req.body.contact_resp_contents === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchContactSql = "select email from contact where contact_id = ?"
+            let searchContactParam = [req.body.contact_id]
+            conn.query(searchContactSql, searchContactParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        let senderEmail = rows[0].email
+                        func.sendEmail(senderEmail, req.body.contact_resp_contents, req.body.contact_resp_title).then(mailContents => {
+                            transporter.sendMail(mailContents, function (error, info) {
+                                if (error)
+                                    res.status(500).json({
+                                        content: "Mail Error"
+                                    })
+                                else
+                                    console.log(info.response)
+                            })
+                        })
+                        let updateContactRespSql = "update contact_log set contact_response = ?, admin_email = ? where contact_id = ?"
+                        let updateContactRespParam = [new Date(), req.session.admin_email, req.body.contact_id]
+                        conn.query(updateContactRespSql, updateContactRespParam, function (error) {
+                            if (error) {
+                                console.error(error)
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
+                            } else {
+                                console.log("Success Contact Response Update.")
+                                res.status(200).json({
+                                    content: true
+                                })
+                            }
+                        })
+                    }
+                }
+                conn.release()
             })
         })
     }

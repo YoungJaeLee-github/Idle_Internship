@@ -1,4 +1,4 @@
-### API 개발 진행률 33/70(47%)
+### API 개발 진행률 49/77(63%)
 <table>
 <thead>
 <tr>
@@ -15,18 +15,18 @@
 </tr>
 <tr>
 <td>관리자 API</td>
-<td>19</td>
-<td>31</td>
+<td>35</td>
+<td>35</td>
 </tr>
 <tr>
 <td>문의게시판 API</td>
 <td>0</td>
-<td>5</td>
+<td>6</td>
 </tr>
 <tr>
 <td>공지사항 게시판 API</td>
 <td>0</td>
-<td>4</td>
+<td>5</td>
 </tr>
 <tr>
 <td>고객센터 게시판 API</td>
@@ -36,7 +36,7 @@
 <tr>
 <td>아이디어 게시판 API</td>
 <td>0</td>
-<td>5</td>
+<td>6</td>
 </tr>
 <tr>
 <td>공고정보 게시판 API</td>
@@ -503,17 +503,31 @@
     2. Content : false
 
 ## 아이디어 상세 조회(관리자)
-* URL : http://{IP}:{PORT}/admin/idea/list/detail
+* URL : http://{IP}:{PORT}/admin/idea/detail
 * Method : GET
 * URL Params
     1. Key : idea_id, Value : 조회할 아이디어 번호
-* Description : 해당 아이디어 글 상세 조회, 삭제 여부 확인, 첨부파일 다운로드.
+* Description : 해당 아이디어 글 상세 조회, 삭제 여부 확인
 * Success Response
     1. Code : 200
     2. Content : true
 * Error Response
     1. Code : 401
     2. Content : false
+  
+## 아이디어 첨부파일 다운로드(관리자)
+* URL : http://{IP}:{PORT}/admin/idea/download
+* Method : POST
+* URL Params
+  1. Key : idea_id, Value : 조회할 아이디어 번호
+  2. Key : idea_file_name, Value : 다운로드 할 첨부파일 이름.
+* Description : 해당 아이디어 글 상세 조회, 삭제 여부 확인, 첨부파일 다운로드.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : false
 
 ## 아이디어 검색(관리자)
 * URL : http://{IP}:{PORT}/admin/idea/search-title
@@ -540,7 +554,7 @@
     2. Content : false
 
 ## 문의글 상세 조회(관리자)
-* URL : http://{IP}:{PORT}/admin/cs/list/detail
+* URL : http://{IP}:{PORT}/admin/cs/detail
 * Method : GET
 * URL Params
     1. Key : cs_id, Value : 문의글 번호
@@ -552,48 +566,26 @@
     1. Code : 401
     2. Content : fales
 
+## 문의글 첨부파일 다운로드(관리자)
+* URL : http://{IP}:{PORT}/admin/cs/download
+* Method : POST
+* URL Params
+  1. Key : cs_id, Value : 조회할 문의글 번호
+  2. Key : cs_file_name, Value : 다운로드 할 첨부파일 이름.
+* Description : 해당 문의글 상세 조회, 삭제 여부 확인, 첨부파일 다운로드.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : false
+
 ## 문의글 검색(관리자)
 * URL : http://{IP}:{PORT}/admin/cs/search-title
 * Method : GET
 * URL Params
-    1. Key : search_title, Value : 검색할 문의글 제목
+    1. Key : cs_title, Value : 검색할 문의글 제목
 * Description : 입력 받은 문자가 포함된 문의글 목록 조회
-* Success Response
-    1. Code : 200
-    2. Content : true
-* Error Response
-    1. Code : 400
-    2. Content : false
-
-## 공지사항 조회(관리자)
-* URL : http://{IP}:{PORT}/admin/notice/list
-* Method : GET
-* Description : 공지사항 목록 15개씩 조회, 삭제 여부 검사
-* Success Response
-    1. Code : 200
-    2. Content : true
-* Error Response
-    1. Code : 400
-    2. Content : true
-
-## 공지사항 상세 조회(관리자)
-* URL : http://{IP}:{PORT}/admin/notice/list/detail
-* Method : GET
-* URL Params
-    1. Key : notice_id, Value : 조회할 공지사항
-* Description : 해당 공지사항 글 상세 조회, 삭제 여부 검사, 첨부파일 다운로드 시 불가.
-* Success Response
-    1. Code : 200
-    2. Content : true
-* Error Response
-    1. Code : 401
-    2. Content : false
-
-## 공지사항 검색(관리자)
-* URL : http://{IP}:{PORT}/admin/notice/search-title
-* Method : GET
-    1. Key : notice_title, Value : 검색할 공지사항 제목
-* Description : 입력된 공지사항 제목이 포함된 공지사항 목록을 조회
 * Success Response
     1. Code : 200
     2. Content : true
@@ -613,7 +605,7 @@
     2. Content : false
 
 ## 공고정보 상세 조회(관리자)
-* URL : http://{IP}:{PORT}/admin/anno/list/detail
+* URL : http://{IP}:{PORT}/admin/anno/detail
 * Method : GET
 * URL Params
     1. Key : bid, Value : 조회할 공고 정보 번호
@@ -638,26 +630,88 @@
     1. Code : 400
     2. Content : false
 
-## 고객센터 관련 정보 조회
-* URL : http://{IP}:{PORT}/admin/contact
+## 공지사항 조회(관리자)
+* URL : http://{IP}:{PORT}/admin/notice/list
+* Method : GET
+* Description : 공지사항 목록 15개씩 조회, 삭제 여부 검사
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : true
+
+## 공지사항 상세 조회(관리자)
+* URL : http://{IP}:{PORT}/admin/notice/detail
 * Method : GET
 * URL Params
-    1. Key : contact_id, Value : 고객센터 문의글 번호
-* Description : 문의글 번호 조회 후 해당 문의글 조회
+  1. Key : notice_id, Value : 조회할 공지사항
+* Description : 해당 공지사항 글 상세 조회, 삭제 여부 검사, 첨부파일 다운로드 시 불가.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : false
+
+## 공지사항 첨부파일 다운로드(관리자)
+* URL : http://{IP}:{PORT}/admin/notice/download
+* Method : POST
+* URL Params
+  1. Key : noitce_id, Value : 조회할 공지사항 번호
+  2. Key : notice_file_name, Value : 다운로드 할 첨부파일 이름.
+* Description : 해당 공지사항 글 상세 조회, 삭제 여부 확인, 첨부파일 다운로드.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : false
+
+## 공지사항 검색(관리자)
+* URL : http://{IP}:{PORT}/admin/notice/search-title
+* Method : GET
+  1. Key : notice_title, Value : 검색할 공지사항 제목
+* Description : 입력된 공지사항 제목이 포함된 공지사항 목록을 조회
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
+
+## 고객센터 관련 정보 조회
+* URL : http://{IP}:{PORT}/admin/contact/list
+* Method : GET
+* URL Params
+* Description : 문의글 번호 조회 후 해당 문의글 리스트 조회
 * Success Response
     1. Code : 200
     2. Content : true
 * Error Response
     1. Code : 400
-    2. Content : false
+    2. Content : false 
+
+## 고객센터 관련 정보 상세 조회
+* URL : http://{IP}:{PORT}/admin/contact/detail
+* Method : GET
+* URL Params
+  1. Key : contact_id, Value : 고객센터 문의글 번호
+* Description : 문의글 번호 조회 후 해당 문의글 조회
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
 
 ## 고객센터 답변
 * URL : http://{IP}:{PORT}/admin/contact/resp
 * Method : POST
 * URL Params
-    1. Key : email, Value : 문의자 이메일
-    2. Key : contact_title, Value : 문의 제목
-    3. Key : contact_content, Value : 문의 내용
+    1. Key : contact_id, Value : 문의글 번호
+    2. Key : contact_resp_title, Value : 답변 제목
+    3. Key : contact_resp_contents, Value : 답변 내용
 * Description : 문의글 번호로 문의글 조회 후 문의자 이메일로 답변 메일 전송
 * Success Response
     1. Code : 200
@@ -695,17 +749,31 @@
     2. Content : false
 
 ## 문의글 상세 조회(사용자)
-* URL : http://{IP}:{PORT}/cs/list/detail
+* URL : http://{IP}:{PORT}/cs/detail
 * Method : GET
 * URL Params
     1. Key : cs_id, Value : 문의글 번호
-* Description : 문의글 제목 클릭시 해당 문의글 상세 정보 조회, 삭제된 문의글은 볼 수 없으며, 첨부파일 다운로드 불가능.
+* Description : 문의글 제목 클릭시 해당 문의글 상세 정보 조회, 삭제된 문의글은 볼 수 없으며, 첨부파일 다운로드 불가능, 비밀글은 본인만 열람 가능.
 * Success Response
     1. Code : 200
     2. Content : true
 * Error Response
     1. Code : 401
     2. Content : fales
+
+## 문의글 첨부파일 다운로드(사용자)
+* URL : http://{IP}:{PORT}/cs/download
+* Method : GET
+* URL Params
+  1. Key : cs_id, Value : 문의글 번호
+  2. Key : cs_file_name, Value : 문의글 파일 이름
+* Description : 문의글 첨부파일 다운로드
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : fales
 
 ## 문의글 수정
 * URL : http://{IP}:{PORT}/cs/edit
@@ -749,7 +817,7 @@
     2. Content : true
 
 ## 공지사항 상세 조회(사용자)
-* URL : http://{IP}:{PORT}/notice/list/detail
+* URL : http://{IP}:{PORT}/notice/detail
 * Method : GET
 * URL Params
     1. Key : notice_id, Value : 조회할 공지사항
@@ -761,12 +829,12 @@
     1. Code : 401
     2. Content : false
 
-## 첨부파일 다운로드
-* URL : http://{IP}:{PORT}/notice/file
+## 공지사항 첨부파일 다운로드(사용자)
+* URL : http://{IP}:{PORT}/notice/download
 * Method : POST
 * URL Params
     1. Key : notice_id, Value : 공지사항 번호
-    2. Key : notice_file_id, Value : 첨부파일 번호
+    2. Key : notice_file_name, Value : 첨부파일 이름
 * Description : 해당 공지사항 번호와 첨부파일 번호 조회 후 다운로드 진행
 * Success Response
     1. Code : 200
@@ -817,17 +885,31 @@
     2. Content : false
 
 ## 아이디어 상세 조회(사용자)
-* URL : http://{IP}:{PORT}/idea/list/detail
+* URL : http://{IP}:{PORT}/idea/detail
 * Method : GET
 * URL Params
     1. Key : idea_id, Value : 조회할 아이디어 번호
-* Description : 해당 아이디어 글 상세 조회
+* Description : 해당 아이디어 글 상세 조회, 본인 아이디어만 열람 가능.
 * Success Response
     1. Code : 200
     2. Content : true
 * Error Response
     1. Code : 401
     2. Content : false
+
+## 아이디어 첨부파일 다운로드(사용자)
+* URL : http://{IP}:{PORT}/idea/download
+* Method : GET
+* URL Params
+  1. Key : idea_id, Value : 아이디어 번호
+  2. Key : idea_file_name, Value : 아이디어 파일 이름
+* Description : 아이디어 첨부파일 다운로드
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : fales
 
 ## 아이디어 작성
 * URL : http://{IP}:{PORT}/idea/regist
@@ -883,7 +965,7 @@
     2. Content : false
 
 ## 공고정보 상세 조회(사용자)
-* URL : http://{IP}:{PORT}/anno/list/detail
+* URL : http://{IP}:{PORT}/anno/detail
 * Method : GET
 * URL Params
     1. Key : anno_id, Value : 조회할 공고 정보 번호

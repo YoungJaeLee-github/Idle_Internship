@@ -5,9 +5,9 @@
  */
 const express = require("express")
 const mailer = require("../config/mail_config.js")
+const transporter = mailer.init()
 const crypto = require("../config/crypto_config.js")
 const app = express.Router()
-const transporter = mailer.init()
 const sessionConfig = require("../config/session_config.js")
 const func = require("../common/function.js")
 const getConnection = require("../config/database_config.js").getConnection
@@ -62,21 +62,23 @@ app.post("/email", (req, res) => {
                                 conn.query(insertEmailAuth, insertParam, function (error, rows, fields) {
                                     if (error) {
                                         res.status(500).send("DB Error")
-                                    } else
+                                    } else {
                                         console.log("Success insert emailAuthData")
+                                    }
                                 })
                             })
-                        }).catch(error => {
-                            console.error(error)
-                        })
-                        func.sendEmail(tempMemberEmail, urlAuthEmail).then(mailContents => {
-                            transporter.sendMail(mailContents, function (error, info) {
-                                if (error) {
-                                    res.status(500).send("Mail Error")
-                                } else {
-                                    // 이메일 인증 코드 전송 완료.
-                                    res.clearCookie("chosen_agree").status(200).send(true)
-                                }
+                            func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
+                                transporter.sendMail(mailContents, function (error, info) {
+                                    if (error) {
+                                        res.status(500).send("Mail Error")
+                                    } else {
+                                        // 이메일 인증 코드 전송 완료.
+                                        res.clearCookie("chosen_agree").status(200).send(true)
+                                        console.log(info.response)
+                                    }
+                                })
+                            }).catch(error => {
+                                console.error(error)
                             })
                         }).catch(error => {
                             console.error(error)
@@ -94,21 +96,22 @@ app.post("/email", (req, res) => {
                                 conn.query(insertEmailAuth, insertParam, function (error, rows, fields) {
                                     if (error) {
                                         res.status(500).send("DB Error")
-                                    } else
-                                        console.log("Success insert emailAuthData")
-                                })
-                            }).catch(error => {
-                                console.error(error)
-                            })
-                            func.sendEmail(tempMemberEmail, urlAuthEmail).then(mailContents => {
-                                transporter.sendMail(mailContents, function (error, info) {
-                                    if (error) {
-                                        res.status(500).send("Mail Error")
                                     } else {
-                                        // 이메일 인증 코드 전송 완료.
-                                        res.clearCookie("chosen_agree").status(200).send(true)
-                                        console.log(info.response)
+                                        console.log("Success insert emailAuthData")
                                     }
+                                })
+                                func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
+                                    transporter.sendMail(mailContents, function (error, info) {
+                                        if (error) {
+                                            res.status(500).send("Mail Error")
+                                        } else {
+                                            // 이메일 인증 코드 전송 완료.
+                                            res.clearCookie("chosen_agree").status(200).send(true)
+                                            console.log(info.response)
+                                        }
+                                    })
+                                }).catch(error => {
+                                    console.error(error)
                                 })
                             }).catch(error => {
                                 console.error(error)
@@ -196,8 +199,8 @@ app.get('/email-check', (req, res) => {
 // 4. 회원가입
 app.post("/signup", (req, res) => {
     let authKey = req.session.auth_key
-    if (authKey === undefined || req.body.member_name === undefined || req.body.member_sex === undefined || req.body.member_birth === undefined||
-    req.body.member_company === undefined || req.body.member_state === undefined || req.body.member_pw === undefined || req.body.member_phone === undefined)
+    if (authKey === undefined || req.body.member_name === undefined || req.body.member_sex === undefined || req.body.member_birth === undefined ||
+        req.body.member_company === undefined || req.body.member_state === undefined || req.body.member_pw === undefined || req.body.member_phone === undefined)
         res.status(401).send(false)
     else {
         let memberName = req.body.member_name
@@ -520,7 +523,7 @@ app.post("/pw/find", (req, res) => {
                                 })
 
                                 let urlPassword = "http://localhost:3000/member/pw/reset-redirect?pw_key=" + key
-                                func.sendEmail(isEmail, urlPassword).then(mailContents => {
+                                func.sendEmail(isEmail, urlPassword, "[idea platform] Regarding email authentication.").then(mailContents => {
                                     transporter.sendMail(mailContents, function (error, info) {
                                         if (error)
                                             res.status(401).send("Mail error")
@@ -724,7 +727,7 @@ app.post("/update", (req, res) => {
 app.patch("/update-detail", (req, res) => {
     let memberEmail = req.session.member_email
     if (memberEmail === undefined || req.body.member_name === undefined || req.body.member_pw === undefined || req.body.member_sex === undefined ||
-    req.body.member_birth === undefined || req.body.member_phone === undefined || req.body.member_company === undefined || req.body.member_state === undefined)
+        req.body.member_birth === undefined || req.body.member_phone === undefined || req.body.member_company === undefined || req.body.member_state === undefined)
         res.status(401).send(false)
     else {
         let memberName = req.body.member_name
