@@ -1,4 +1,4 @@
-### API 개발 진행률 69/79(87%)
+### API 개발 진행률 69/81(85%)
 <table>
 <thead>
 <tr>
@@ -46,7 +46,7 @@
 <tr>
 <td>포인트 API</td>
 <td>0</td>
-<td>4</td>
+<td>6</td>
 </tr>
 <tr>
 <td>페이지네이션 API</td>
@@ -191,7 +191,7 @@
     1. Code : 400
     2. Content : false
 
-## 회원정보수정
+## 회원정보수정 상세 바로가기
 * URL : http://{IP}:{PORT}/member/update
 * Method : POST
 * URL Params
@@ -1083,20 +1083,47 @@
 ## 포인트 적립내역 조회
 * URL : http://{IP}:{PORT}/{admin/member}/point/point-history
 * Method : GET
-* Description : 용자의 아이디어 제목(적립 내역), 얻은 포인트, 적립 날짜 조회
+* Description : 사용자의 아이디어 제목(적립 내역), 얻은 포인트, 적립 날짜 조회
 * Success Response
     1. Code : 200
     2. Content : true
 * Error Response
     1. Code : 401
     2. Content : false
-
-## 포인트 사용
-* URL : http://{IP}:{PORT}/{admin/member}/use-point
+  
+## 포인트 사용(사용자)
+* URL : http://{IP}:{PORT}/member/point/use-point
 * Method : PATCH
 * URL Params
-    1. Key : use_point, Value : 사용할 포인트
-* Description : 사용자 이메일에 해당하는 사용 포인트, 사용자 포인트(누적 포인트 - 사용 포인트), 포인트 사용 날짜, 포인트 사용 내역 업데이트 / 포인트 순위는 7일 간격으로 정렬 알고리즘 사용 후 업데이트
+  1. Key : use_point, Value : 사용할 포인트
+* Description : 현재 사용 가능한 point까지만 사용가능. point 테이블 정보 "사용" 으로 업데이트.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
+  
+## 포인트 사용 현황 보기(관리자)
+* URL : http://{IP}:{PORT}/admin/point/use-history
+* Method : GET
+* URL Params
+  1. Key : member_email, Value : 조회할 사용자 이메일
+* Description : 현재 사용 가능한 포인트, point 테이블 내역 중 "사용" 내역 중 수락 flag가 0 인 것 최근 순으로 조회.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
+  
+## 포인트 사용 업데이트(관리자)
+* URL : http://{IP}:{PORT}/admin/use-point
+* Method : PATCH
+* URL Params
+    1. Key : point, Value : 사용할 포인트
+    2. Key : use_contents, Value : 사용 내역
+* Description : 관리자는 포인트 사용 현황 보기 에서 확인 후 "사용" 내역에 해당하는 포인트로(사용자가 사용 요청한 포인트) 사용자 이메일에 해당하는 사용 포인트, 사용자 포인트(누적 포인트 - 사용 포인트) 업데이트, point 테이블 수락 flag 업데이트.
 * Success Response
     1. Code : 200
     2. Content : true
