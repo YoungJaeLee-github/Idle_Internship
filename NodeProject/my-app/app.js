@@ -7,6 +7,8 @@ const memberRouter = require('./routes/member.js')
 const adminRouter = require('./routes/admin.js')
 const csRouter = require('./routes/cs.js')
 const noticeRouter = require('./routes/notice.js')
+const contactRouter = require('./routes/contact.js')
+const ideaRouter = require('./routes/idea.js')
 const app = express();
 
 // let indexRouter = require('./routes/index');
@@ -25,6 +27,8 @@ app.use('/member', memberRouter)
 app.use('/admin', adminRouter)
 app.use('/cs', csRouter)
 app.use('/notice', noticeRouter)
+app.use('/contact', contactRouter)
+app.use('/idea', ideaRouter)
 app.use(express.json())
 // app.use('/', indexRouter);
 // app.use('/users', usersRouter);

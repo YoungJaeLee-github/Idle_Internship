@@ -1,4 +1,4 @@
-### API 개발 진행률 61/78(78%)
+### API 개발 진행률 69/79(87%)
 <table>
 <thead>
 <tr>
@@ -30,12 +30,12 @@
 </tr>
 <tr>
 <td>고객센터 게시판 API</td>
-<td>0</td>
-<td>1</td>
+<td>2</td>
+<td>2</td>
 </tr>
 <tr>
 <td>아이디어 게시판 API</td>
-<td>0</td>
+<td>6</td>
 <td>6</td>
 </tr>
 <tr>
@@ -577,7 +577,7 @@
   2. Content : true
 * Error Response
   1. Code : 401
-  2. Content : fales
+  2. Content : false
 
 ## 문의글 첨부파일 다운로드(관리자)
 * URL : http://{IP}:{PORT}/admin/cs/download
@@ -772,7 +772,7 @@
     2. Content : true
 * Error Response
     1. Code : 401
-    2. Content : fales
+    2. Content : false
 
 ## 문의글 답변 상세 조회(사용자)
 * URL : http://{IP}:{PORT}/cs/resp/detail
@@ -785,7 +785,7 @@
   2. Content : true
 * Error Response
   1. Code : 401
-  2. Content : fales
+  2. Content : false
 
 ## 문의글 첨부파일 다운로드(사용자)
 * URL : http://{IP}:{PORT}/cs/download
@@ -799,7 +799,7 @@
   2. Content : true
 * Error Response
   1. Code : 401
-  2. Content : fales
+  2. Content : false
 
 ## 문의글 수정
 * URL : http://{IP}:{PORT}/cs/edit
@@ -883,6 +883,17 @@
     2. Content : false
 
 # 고객센터 API
+## 고객센터 문의글 이메일 가져오기
+* URL : http://{IP}:{PORT}/contact
+* Method : POST
+* Description : 현재 세션에 로그인 정보가 있으면 이메일란에 이메일 기입 그렇지 않으면 공란.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
+
 ## 고객센터 문의글 작성
 * URL : http://{IP}:{PORT}/contact/regist
 * Method : POST
@@ -890,7 +901,7 @@
     1. Key : email, Value : 입력한 이메일(혹은 세션 이메일)
     2. Key : contact_title, Value : 입력한 고객센터 문의글 제목
     3. Key : contact_contents, Value : 입력한 고객센터 문의글 내용
-* Description : 현재 세션에 로그인 정보가 있으면 이메일란에 이메일 기입 그렇지 않으면  이메일 작성, 제목 및 내용 작성 후 DB에 저장 / 보낸 시간 저장, 답변 시 답변 시간 저장
+* Description : 제목 및 내용 작성 후 DB에 저장 / 보낸 시간 저장, 답변 시 답변 시간 저장
 * Success Response
     1. Code : 200
     2. Content : true
@@ -899,6 +910,37 @@
     2. Content : false
 
 # 아이디어 API
+## 아이디어 작성
+* URL : http://{IP}:{PORT}/idea/regist
+* Method : POST
+* URL Params
+  1. Key : idea_title, Value : 작성할 아이디어 제목
+  2. Key : idea_contents, Value : 작성할 아이디어 내용
+  3. Key : idea_file, Value : 업로드할 파일
+* Description : 아이디어 작성시 작성 가능 여부 체크 후 작성/ 작성일 사용자 이메일, 500포인트, 적립 날짜 DB에 저장
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
+
+## 아이디어 수정
+* URL : http://{IP}:{PORT}/idea/edit
+* Method : PATCH
+* URL Params
+  1. Key : idea_title, Value : 수정할 아이디어 제목
+  2. Key : idea_contents, Value : 수정할 아이디어 내용
+  3. Key : file, Value : 수정할 파일
+  4. Key : idea_id, Value : 수정할 아이디어 번호
+* Description : 아이디어 제목 및 내용 수정/ 수정일, 수정 전 내용 DB에 저장
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
+
 ## 아이디어 조회(사용자)
 * URL : http://{IP}:{PORT}/idea/list
 * Method : GET
@@ -926,7 +968,7 @@
 
 ## 아이디어 첨부파일 다운로드(사용자)
 * URL : http://{IP}:{PORT}/idea/download
-* Method : GET
+* Method : POST
 * URL Params
   1. Key : idea_id, Value : 아이디어 번호
   2. Key : idea_file_name, Value : 아이디어 파일 이름
@@ -936,35 +978,7 @@
   2. Content : true
 * Error Response
   1. Code : 401
-  2. Content : fales
-
-## 아이디어 작성
-* URL : http://{IP}:{PORT}/idea/regist
-* Method : POST
-* URL Params
-    1. Key : idea_title, Value : 작성할 아이디어 제목
-    2. Key : idea_contents, Value : 작성할 아이디어 내용
-* Description : 아이디어 작성시 작성 가능 여부 체크 후 작성/ 작성일 사용자 이메일, 500포인트, 적립 날짜 DB에 저장
-* Success Response
-    1. Code : 200
-    2. Content : true
-* Error Response
-    1. Code : 400
-    2. Content : false
-
-## 아이디어 수정
-* URL : http://{IP}:{PORT}/idea/edit
-* Method : PATCH
-* URL Params
-    1. Key : idea_title, Value : 수정할 아이디어 제목
-    2. Key : idea_contents, Value : 수정할 아이디어 내용
-* Description : 아이디어 제목 및 내용 수정/ 수정일, 수정 전 내용 DB에 저장
-* Success Response
-    1. Code : 200
-    2. Content : true
-* Error Response
-    1. Code : 400
-    2. Content : false
+  2. Content : false
 
 ## 아이디어 검색(사용자)
 * URL : http://{IP}:{PORT}/idea/search-title

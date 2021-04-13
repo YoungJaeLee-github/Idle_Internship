@@ -60,9 +60,22 @@ async function generateAuthKey() {
     })
 }
 
+function masking(str) {
+    let originalStr = str
+    if (typeof originalStr === "undefined" || originalStr === "")
+        return originalStr
+    else {
+        if (originalStr.length === 3)
+            return originalStr.replace(/(?<=.{2})./gi, "*")
+        else
+            return originalStr.length <= 3 ? originalStr.replace(/(?<=.{1})./gi, "*") : originalStr.replace(/(?<=.{3})./gi, "*")
+    }
+}
+
 module.exports = {
     sendEmail,
     emailCheck,
     regExp,
     generateAuthKey,
+    masking
 }

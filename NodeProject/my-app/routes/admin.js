@@ -816,12 +816,10 @@ app.delete("/idea/remove", (req, res) => {
             "content": false
         })
     else {
-        let searchIdeaSql = "select idea_delete from idea where idea_id = ?;"
+        let searchIdeaSql = "select idea_delete, add_point from idea where idea_id = ?;"
         let searchIdeaParam = [req.body.idea_id]
-        let updateIdeaSql = "update idea set idea_delete = ?, admin_email = ? where idea_id = ?;"
-        let updateIdeaParam = [1, req.session.admin_email, req.body.idea_id]
         getConnection((conn) => {
-            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows, fields) {
+            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
@@ -838,19 +836,59 @@ app.delete("/idea/remove", (req, res) => {
                                 "content": false
                             })
                         else {
-                            conn.query(updateIdeaSql, updateIdeaParam, function (error, rows, fields) {
-                                if (error) {
-                                    console.error(error)
-                                    res.status(500).json({
-                                        "content": "DB Error"
-                                    })
-                                } else {
-                                    console.log("success remove idea.")
-                                    res.status(200).json({
-                                        "content": true
-                                    })
-                                }
-                            })
+                            let originalPoint = rows[0].add_point
+                            if (originalPoint === null) {
+                                res.status(401).json({
+                                    content: false
+                                })
+                            } else {
+                                let memberCheckSql = "select member_ban, member_secede, member.member_email, member.save_point, member.use_point from member join idea on member.member_email = idea.member_email where idea_id = ?;"
+                                let memberCheckParam = [req.body.idea_id]
+                                conn.query(memberCheckSql, memberCheckParam, function (error, rows) {
+                                    if (error) {
+                                        console.error(error)
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
+                                    } else {
+                                        if (rows.length === 0) {
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        } else {
+                                            if (rows[0].member_ban === 1 || rows[0].member_secede === 1) {
+                                                res.status(404).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let memberEmail = rows[0].member_email
+                                                let todoAddSavePoint = rows[0].save_point - originalPoint
+                                                let todoAddMemberPoint = todoAddSavePoint - rows[0].use_point
+                                                let totalSql = "update idea set idea_delete = " + conn.escape(1) + ", admin_email = " +
+                                                    conn.escape(req.session.admin_email) + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
+                                                totalSql += " insert into point(member_email, use_date, use_contents, point) values(" +
+                                                    conn.escape(memberEmail) + ", " + conn.escape(new Date()) + ", " + conn.escape("아이디어 삭제") + ", " +
+                                                    conn.escape(originalPoint) + ");"
+                                                totalSql += " update member set member_point = " + conn.escape(todoAddMemberPoint) + ", save_point = " +
+                                                    conn.escape(todoAddSavePoint) + " where member_email = " + conn.escape(memberEmail) + ";"
+                                                conn.query(totalSql, function (error) {
+                                                    if (error) {
+                                                        console.error(error)
+                                                        res.status(500).json({
+                                                            "content": "DB Error"
+                                                        })
+                                                    } else {
+                                                        console.log("success remove idea.")
+                                                        res.status(200).json({
+                                                            "content": true
+                                                        })
+                                                    }
+                                                })
+                                            }
+                                        }
+                                    }
+                                })
+                            }
                         }
                     }
                 }
@@ -954,7 +992,7 @@ app.patch("/point/give", (req, res) => {
 // 11. 포인트 회수
 app.patch("/point/cancel", (req, res) => {
     //idea 테이블 에서 idea id 조회 후 관리자 이메일, 얻은 포인트, 변동일자 업데이트.
-    if (req.session.admin_email === undefined || req.body.idea_id === undefined)
+    if (req.session.admin_email === undefined || req.body.idea_id === undefined || req.body.cancel_point === undefined)
         res.status(401).json({
             "content": false
         })
@@ -1006,7 +1044,7 @@ app.patch("/point/cancel", (req, res) => {
                                                 })
                                             else {
                                                 let updateIdeaPointSql = "update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?;"
-                                                let updateIdeaPointParam = [req.session.admin_email, originalPoint - 500, new Date(), ideaId]
+                                                let updateIdeaPointParam = [req.session.admin_email, originalPoint - req.body.cancel_point, new Date(), ideaId]
                                                 conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows, fields) {
                                                     if (error) {
                                                         console.error(error)
@@ -1018,7 +1056,7 @@ app.patch("/point/cancel", (req, res) => {
                                                 })
                                                 // point 테이블 insert.
                                                 let insertPointSql = "insert into point (member_email, use_date, use_contents, point) values((select member_email from idea where idea_id = ?), ?, ?, ?);"
-                                                let insertPointParam = [ideaId, new Date(), "회수", 500]
+                                                let insertPointParam = [ideaId, new Date(), "회수", req.body.cancel_point]
                                                 conn.query(insertPointSql, insertPointParam, function (error, rows, fields) {
                                                     if (error) {
                                                         console.error(error)
@@ -1031,7 +1069,7 @@ app.patch("/point/cancel", (req, res) => {
                                                 })
                                                 // member 테이블에서 누적 포인트, 사용 포인트 조회 후 누적포인트, 사용자포인트 업데이트.
                                                 let updateMemberPointSql = "update member set member_point = ?, save_point = ? where member_email = (select member_email from idea where idea_id = ?);"
-                                                let todoAddSavePoint = rows[0].save_point - 500
+                                                let todoAddSavePoint = rows[0].save_point - req.body.cancel_point
                                                 let todoAddMemberPoint = todoAddSavePoint - rows[0].use_point
                                                 let updateMemberPointParam = [todoAddMemberPoint, todoAddSavePoint, ideaId]
                                                 conn.query(updateMemberPointSql, updateMemberPointParam, function (error, rows, fields) {
