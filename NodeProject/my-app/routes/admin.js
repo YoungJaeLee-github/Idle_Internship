@@ -1117,6 +1117,9 @@ app.post("/notice/regist", upload.any(), (req, res) => {
                 + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
             conn.query(insertNoticeSql, function (error) {
                 if (error) {
+                    for (let i = 0; i < req.files.length; i++) {
+                        fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                    }
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
@@ -1135,6 +1138,9 @@ app.post("/notice/regist", upload.any(), (req, res) => {
                                 " order by notice_id desc limit " + conn.escape(1) + "));"
                         conn.query(insertFileSql, function (error) {
                             if (error) {
+                                for (let i = 0; i < req.files.length; i++) {
+                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                }
                                 console.error(error)
                                 res.status(500).json({
                                     content: "DB Error"
@@ -1169,25 +1175,37 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
             let deleteCheckParam = [req.body.notice_id]
             conn.query(deleteCheckSql, deleteCheckParam, function (error, rows) {
                 if (error) {
+                    for (let i = 0; i < req.files.length; i++) {
+                        fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                    }
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0)
+                    if (rows.length === 0) {
+                        for (let i = 0; i < req.files.length; i++) {
+                            fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                        }
                         res.status(401).json({
                             content: false
                         })
-                    else {
-                        if (rows[0].notice_delete === 1)
+                    } else {
+                        if (rows[0].notice_delete === 1) {
+                            for (let i = 0; i < req.files.length; i++) {
+                                fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                            }
                             res.status(401).json({
                                 content: false
                             })
-                        else {
+                        } else {
                             let checkLogSql = "select notice_id from notice_log where notice_id = ?;"
                             let checkLogParam = [req.body.notice_id]
                             conn.query(checkLogSql, checkLogParam, function (error, rows) {
                                 if (error) {
+                                    for (let i = 0; i < req.files.length; i++) {
+                                        fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                    }
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
@@ -1200,6 +1218,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                         if (Object.keys(req.files).length === 0) {
                                             conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
                                                 if (error) {
+                                                    for (let i = 0; i < req.files.length; i++) {
+                                                        fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                    }
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -1213,6 +1234,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1236,6 +1260,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             ", " + conn.escape(req.session.admin_email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1252,6 +1279,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                         } else {
                                             conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
                                                 if (error) {
+                                                    for (let i = 0; i < req.files.length; i++) {
+                                                        fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                    }
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -1269,6 +1299,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             + ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1299,6 +1332,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
 
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1319,6 +1355,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                         if (Object.keys(req.files).length === 0) {
                                             conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
                                                 if (error) {
+                                                    for (let i = 0; i < req.files.length; i++) {
+                                                        fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                    }
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -1332,6 +1371,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1355,6 +1397,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1371,6 +1416,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                         } else {
                                             conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
                                                 if (error) {
+                                                    for (let i = 0; i < req.files.length; i++) {
+                                                        fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                    }
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -1388,6 +1436,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1418,6 +1469,9 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
 
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                for (let i = 0; i < req.files.length; i++) {
+                                                                    fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
+                                                                }
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
@@ -1798,7 +1852,7 @@ app.post("/idea/download", (req, res) => {
                                 content: false
                             })
                         else {
-                            let fileCheckSql = "select idea_file_path from idea_file_dir where idea_file_name = ? and idea_id = ?"
+                            let fileCheckSql = "select idea_file_path from idea_file_dir where idea_file_name = ? and idea_id = ?;"
                             let fileCheckParam = [req.body.idea_file_name, req.body.idea_id]
                             conn.query(fileCheckSql, fileCheckParam, function (error, rows) {
                                 if (error) {
@@ -2031,7 +2085,52 @@ app.get("/cs/detail", (req, res) => {
     }
 })
 
-// 24. 문의글 첨부파일 다운로드(관리자)
+// 24. 문의글 답변 상세 조회(관리자)
+app.get("/cs/resp/detail", (req, res) => {
+    if (req.session.admin_email === undefined || req.query.cs_id === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let searchRespDetailSql = "select cs_title, admin.admin_name, cs_resp_date, cs_resp from cs left join member on cs.member_email = member.member_email left join admin on cs.admin_email = admin.admin_email where cs_delete != ? and member.member_ban != ? and member.member_secede != ? and cs_id = ?"
+            let searchRespDetailParam = [1, 1, 1, req.query.cs_id]
+            conn.query(searchRespDetailSql, searchRespDetailParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(401).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].cs_resp_date === null) {
+                            res.status(401).json({
+                                content: false
+                            })
+                        } else {
+                            let csRespDetailStruct = {
+                                cs_resp_title: "RE : " + rows[0].cs_title,
+                                admin_name: rows[0].admin_name,
+                                cs_resp_date: rows[0].cs_resp_date,
+                                cs_resp: rows[0].cs_resp
+                            }
+                            res.status(200).json({
+                                csRespDetailStruct
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 25. 문의글 첨부파일 다운로드(관리자)
 app.post("/cs/download", (req, res) => {
     if (req.session.admin_email === undefined || req.body.cs_id === undefined || req.body.cs_file_name === undefined)
         res.status(401).json({
@@ -2102,7 +2201,7 @@ app.post("/cs/download", (req, res) => {
     }
 })
 
-// 25. 문의글 검색(관리자)
+// 26. 문의글 검색(관리자)
 app.get("/cs/search-title", (req, res) => {
     if (req.session.admin_email === undefined || req.query.cs_title === undefined)
         res.status(401).json({
@@ -2110,9 +2209,16 @@ app.get("/cs/search-title", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchCsSql = "select cs_title, cs_date\n" +
-                "from cs join member\n" +
-                "where match(cs_title) against(? in boolean mode) and cs_delete != ? and cs.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? order by cs_id desc limit ?;"
+            let searchCsSql = "select cs_title, member_name, cs_date, admin.admin_name, cs.cs_resp_date, cs_secret\n" +
+                "from cs\n" +
+                "         left join member on cs.member_email = member.member_email\n" +
+                "         left join admin on cs.admin_email = admin.admin_email\n" +
+                "where match(cs_title) against(? in boolean mode)\n" +
+                "  and cs_delete != ?\n" +
+                "  and member.member_secede != ?\n" +
+                "  and member.member_ban != ?\n" +
+                "order by cs_id desc\n" +
+                "limit ?;"
             let searchCsParam = [req.query.cs_title, 1, 1, 1, 15]
             conn.query(searchCsSql, searchCsParam, function (error, rows) {
                 if (error) {
@@ -2128,10 +2234,41 @@ app.get("/cs/search-title", (req, res) => {
                     } else {
                         let csStruct = []
                         for (let i = 0; i < rows.length; i++) {
-                            csStruct.push({
-                                cs_title: rows[i].cs_title,
-                                cs_date: rows[i].cs_date
-                            })
+                            if (rows[i].cs_resp_date === null) {
+                                if (rows[i].cs_secret === 1) {
+                                    csStruct.push({
+                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                        member_name: rows[i].member_name,
+                                        cs_date: rows[i].cs_date
+                                    })
+                                } else {
+                                    csStruct.push({
+                                        cs_title: rows[i].cs_title,
+                                        member_name: rows[i].member_name,
+                                        cs_date: rows[i].cs_date
+                                    })
+                                }
+                            } else {
+                                if (rows[i].cs_secret === 1) {
+                                    csStruct.push({
+                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                        member_name: rows[i].member_name,
+                                        cs_date: rows[i].cs_date,
+                                        cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                        admin_name: rows[i].admin_name,
+                                        cs_resp_date: rows[i].cs_resp_date
+                                    })
+                                } else {
+                                    csStruct.push({
+                                        cs_title: rows[i].cs_title,
+                                        member_name: rows[i].member_name,
+                                        cs_date: rows[i].cs_date,
+                                        cs_resp_title: "RE : " + rows[i].cs_title,
+                                        admin_name: rows[i].admin_name,
+                                        cs_resp_date: rows[i].cs_resp_date
+                                    })
+                                }
+                            }
                         }
                         res.status(200).json({
                             csStruct
@@ -2144,7 +2281,7 @@ app.get("/cs/search-title", (req, res) => {
     }
 })
 
-// 26. 공고정보 조회(관리자)
+// 27. 공고정보 조회(관리자)
 app.get("/anno/list", (req, res) => {
     if (req.session.admin_email === undefined)
         res.status(401).json({
@@ -2185,7 +2322,7 @@ app.get("/anno/list", (req, res) => {
     }
 })
 
-// 27. 공고정보 상세 조회(관리자)
+// 28. 공고정보 상세 조회(관리자)
 app.get("/anno/list/detail", (req, res) => {
     if (req.session.admin_email === undefined || req.query.bid === undefined)
         res.status(401).json({
@@ -2221,7 +2358,7 @@ app.get("/anno/list/detail", (req, res) => {
     }
 })
 
-// 28. 공고정보 검색(관리자)
+// 29. 공고정보 검색(관리자)
 app.get("/anno/search-title", (req, res) => {
     if (req.session.admin_email === undefined || req.query.anno_title === undefined)
         res.status(401).json({
@@ -2263,7 +2400,7 @@ app.get("/anno/search-title", (req, res) => {
     }
 })
 
-// 29. 공지사항 조회(관리자)
+// 30. 공지사항 조회(관리자)
 app.get("/notice/list", (req, res) => {
     if (req.session.admin_email === undefined)
         res.status(401).json({
@@ -2303,7 +2440,7 @@ app.get("/notice/list", (req, res) => {
     }
 })
 
-// 30. 공지사항 상세 조회(관리자)
+// 31. 공지사항 상세 조회(관리자)
 app.get("/notice/detail", (req, res) => {
     if (req.session.admin_email === undefined || req.query.notice_id === undefined)
         res.status(401).json({
@@ -2410,7 +2547,7 @@ app.get("/notice/detail", (req, res) => {
     }
 })
 
-// 31. 공지사항 첨부파일 다운로드(관리자)
+// 32. 공지사항 첨부파일 다운로드(관리자)
 app.post("/notice/download", (req, res) => {
     if (req.session.admin_email === undefined || req.body.notice_id === undefined || req.body.notice_file_name === undefined)
         res.status(401).json({
@@ -2481,7 +2618,7 @@ app.post("/notice/download", (req, res) => {
     }
 })
 
-// 32. 공지사항 검색(관리자)
+// 33. 공지사항 검색(관리자)
 app.get("/notice/search-title", (req, res) => {
     if (req.session.admin_email === undefined || req.query.notice_title === undefined)
         res.status(401).json({
@@ -2523,7 +2660,7 @@ app.get("/notice/search-title", (req, res) => {
     }
 })
 
-// 33. 고객센터 관련 정보 조회
+// 34. 고객센터 관련 정보 조회
 app.get("/contact/list", (req, res) => {
     if (req.session.admin_email === undefined)
         res.status(401).json({
@@ -2563,7 +2700,7 @@ app.get("/contact/list", (req, res) => {
     }
 })
 
-// 34. 고객센터 관련 정보 상세 조회
+// 35. 고객센터 관련 정보 상세 조회
 app.get("/contact/detail", (req, res) => {
     if (req.session.admin_email === undefined || req.query.contact_id === undefined)
         res.status(401).json({
@@ -2603,7 +2740,7 @@ app.get("/contact/detail", (req, res) => {
     }
 })
 
-// 35. 고객센터 답변
+// 36. 고객센터 답변
 app.post("/contact/resp", (req, res) => {
     if (req.session.admin_email === undefined || req.body.contact_id === undefined || req.body.contact_resp_title === undefined || req.body.contact_resp_contents === undefined)
         res.status(401).json({

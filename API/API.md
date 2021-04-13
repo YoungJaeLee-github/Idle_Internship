@@ -1,4 +1,4 @@
-### API 개발 진행률 51/77(66%)
+### API 개발 진행률 61/78(78%)
 <table>
 <thead>
 <tr>
@@ -15,18 +15,18 @@
 </tr>
 <tr>
 <td>관리자 API</td>
-<td>35</td>
-<td>35</td>
+<td>36</td>
+<td>36</td>
 </tr>
 <tr>
 <td>문의게시판 API</td>
-<td>2</td>
-<td>6</td>
+<td>7</td>
+<td>7</td>
 </tr>
 <tr>
 <td>공지사항 게시판 API</td>
-<td>0</td>
-<td>5</td>
+<td>4</td>
+<td>4</td>
 </tr>
 <tr>
 <td>고객센터 게시판 API</td>
@@ -564,7 +564,20 @@
     2. Content : true
 * Error Response
     1. Code : 401
-    2. Content : fales
+    2. Content : false
+
+## 문의글 답변 상세 조회(관리자)
+* URL : http://{IP}:{PORT}/admin/cs/resp/detail
+* Method : GET
+* URL Params
+  1. Key : cs_id, Value : 문의글 번호
+* Description : 문의글 답변 상세 조회.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : fales
 
 ## 문의글 첨부파일 다운로드(관리자)
 * URL : http://{IP}:{PORT}/admin/cs/download
@@ -761,6 +774,19 @@
     1. Code : 401
     2. Content : fales
 
+## 문의글 답변 상세 조회(사용자)
+* URL : http://{IP}:{PORT}/cs/resp/detail
+* Method : GET
+* URL Params
+  1. Key : cs_id, Value : 문의글 번호
+* Description : 문의글 답변 상세 조회.
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : fales
+
 ## 문의글 첨부파일 다운로드(사용자)
 * URL : http://{IP}:{PORT}/cs/download
 * Method : POST
@@ -783,6 +809,7 @@
     2. Key : cs_title, Value : 수정할 제목
     3. Key : cs_secret, Value : 비밀글 여부
     4. Key : cs_file, Value : 첨부파일
+    5. Key : cs_id, Value : 수정할 문의글 번호
 * Description : 문의글 수정/수정일 저장.
 * Success Response
     1. Code : 200
@@ -795,7 +822,7 @@
 * URL : http://{IP}:{PORT}/cs/search-title
 * Method : GET
 * URL Params
-    1. Key : search_title, Value : 검색할 문의글 제목
+    1. Key : cs_title, Value : 검색할 문의글 제목
 * Description : 입력 받은 문자가 포함된 문의글 목록 조회
 * Success Response
     1. Code : 200
@@ -821,7 +848,7 @@
 * Method : GET
 * URL Params
     1. Key : notice_id, Value : 조회할 공지사항
-* Description : 해당 공지사항 글 상세 조회, 삭제 여부 검사, 첨부파일 다운로드 시 불가.
+* Description : 해당 공지사항 글 상세 조회, 삭제 여부 검사
 * Success Response
     1. Code : 200
     2. Content : true

@@ -6,6 +6,7 @@ const logger = require('morgan');
 const memberRouter = require('./routes/member.js')
 const adminRouter = require('./routes/admin.js')
 const csRouter = require('./routes/cs.js')
+const noticeRouter = require('./routes/notice.js')
 const app = express();
 
 // let indexRouter = require('./routes/index');
@@ -23,6 +24,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/member', memberRouter)
 app.use('/admin', adminRouter)
 app.use('/cs', csRouter)
+app.use('/notice', noticeRouter)
 app.use(express.json())
 // app.use('/', indexRouter);
 // app.use('/users', usersRouter);

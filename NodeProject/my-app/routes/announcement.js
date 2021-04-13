@@ -4,27 +4,16 @@
  * --------------------------------------------------------------------------------------------------------
  */
 const express = require("express")
-const mailer = require("../config/mail_config.js")
-const databaseConfig = require("../config/database_config.js")
-const crypto = require("../config/crypto_config.js")
 const app = express.Router()
-const transporter = mailer.init()
-const conn = databaseConfig.init()
+const getConnection = require("../config/database_config.js").getConnection
 const sessionConfig = require("../config/session_config.js")
 app.use(sessionConfig.init())
-
-/**
- * --------------------------------------------------------------------------------------------------------
- * 함수 구현 부분
- * --------------------------------------------------------------------------------------------------------
- */
 
 /**
  * --------------------------------------------------------------------------------------------------------
  * API 구현 부분
  * --------------------------------------------------------------------------------------------------------
  */
-
 
 /**
  * 공고정보게시판 API
