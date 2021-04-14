@@ -117,68 +117,173 @@ app.post("/regist", upload.any(), (req, res) => {
 // 2. 문의글 조회(사용자)
 app.get("/list", (req, res) => {
     getConnection((conn) => {
-        let searchCsSql = "select cs_title, member.member_name, cs_date, cs_secret, admin.admin_name, cs_resp_date from cs left join member on cs.member_email = member.member_email left join admin on cs.admin_email = admin.admin_email where cs_delete != ? and member.member_ban != ? and member.member_secede != ? order by cs_id desc limit ?;"
-        let searchCsParam = [1, 1, 1, 15]
-        conn.query(searchCsSql, searchCsParam, function (error, rows) {
+        let getCountSql = "select count(*) as count from cs join member on cs.member_email = member.member_email where member_secede != ? and member_ban != ? and cs_delete != ?;"
+        let getCountParam = [1, 1, 1]
+        conn.query(getCountSql, getCountParam, function(error, rows) {
             if (error) {
                 console.error(error)
                 res.status(500).json({
                     content: "DB Error"
                 })
             } else {
-                if (rows.length === 0) {
-                    res.status(401).json({
+                if (rows.length === 0 || rows[0].count === 0) {
+                    res.status(404).json({
                         content: false
                     })
                 } else {
-                    let csStruct = []
-                    for (let i = 0; i < rows.length; i++) {
-                        // 답변이 없는 경우.
-                        if (rows[i].cs_resp_date === null) {
-                            // 비밀글인 경우
-                            if (rows[i].cs_secret === 1) {
-                                csStruct.push({
-                                    cs_title: "[비밀글] " + rows[i].cs_title,
-                                    member_name: rows[i].member_name,
-                                    cs_date: rows[i].cs_date
+                    let pageSize = 15
+                    if (rows[0].count > pageSize) {
+                        if (req.query.page === undefined || req.query.page === "")
+                            res.status(401).json({
+                                content: "empty page number"
+                            })
+                        else {
+                            let page = req.query.page
+                            let start = 0
+                            if (page <= 0)
+                                page = 1
+                            else
+                                start = (page - 1) * pageSize
+                            const totalPageCount = rows[0].count
+                            if (page > Math.ceil(totalPageCount / pageSize))
+                                res.status(404).json({
+                                    content: "over page"
                                 })
-                            } else {
-                                // 비밀글이 아닌 경우
-                                csStruct.push({
-                                    cs_title: rows[i].cs_title,
-                                    member_name: rows[i].member_name,
-                                    cs_date: rows[i].cs_date
-                                })
-                            }
-                        } else {
-                            //답변이 있는 경우
-                            // 비밀글인 경우
-                            if (rows[i].cs_secret === 1) {
-                                csStruct.push({
-                                    cs_title: "[비밀글] " + rows[i].cs_title,
-                                    member_name: rows[i].member_name,
-                                    cs_date: rows[i].cs_date,
-                                    cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
-                                    admin_name: rows[i].admin_name,
-                                    cs_resp_date: rows[i].cs_resp_date
-                                })
-                            } else {
-                                // 비밀글이 아닌 경우
-                                csStruct.push({
-                                    cs_title: rows[i].cs_title,
-                                    member_name: rows[i].member_name,
-                                    cs_date: rows[i].cs_date,
-                                    cs_resp_title: "RE : " + rows[i].cs_title,
-                                    admin_name: rows[i].admin_name,
-                                    cs_resp_date: rows[i].cs_resp_date
+                            else {
+                                let searchCsSql = "select cs_title, member.member_name, cs_date, cs_secret, admin.admin_name, cs_resp_date from cs left join member on cs.member_email = member.member_email left join admin on cs.admin_email = admin.admin_email where cs_delete != ? and member.member_ban != ? and member.member_secede != ? order by cs_id desc limit ?, ?;"
+                                let searchCsParam = [1, 1, 1, start, pageSize]
+                                conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                                    if (error) {
+                                        console.error(error)
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
+                                    } else {
+                                        if (rows.length === 0) {
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        } else {
+                                            let csStruct = []
+                                            for (let i = 0; i < rows.length; i++) {
+                                                // 답변이 없는 경우.
+                                                if (rows[i].cs_resp_date === null) {
+                                                    // 비밀글인 경우
+                                                    if (rows[i].cs_secret === 1) {
+                                                        csStruct.push({
+                                                            cs_title: "[비밀글] " + rows[i].cs_title,
+                                                            member_name: rows[i].member_name,
+                                                            cs_date: rows[i].cs_date
+                                                        })
+                                                    } else {
+                                                        // 비밀글이 아닌 경우
+                                                        csStruct.push({
+                                                            cs_title: rows[i].cs_title,
+                                                            member_name: rows[i].member_name,
+                                                            cs_date: rows[i].cs_date
+                                                        })
+                                                    }
+                                                } else {
+                                                    //답변이 있는 경우
+                                                    // 비밀글인 경우
+                                                    if (rows[i].cs_secret === 1) {
+                                                        csStruct.push({
+                                                            cs_title: "[비밀글] " + rows[i].cs_title,
+                                                            member_name: rows[i].member_name,
+                                                            cs_date: rows[i].cs_date,
+                                                            cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                            admin_name: rows[i].admin_name,
+                                                            cs_resp_date: rows[i].cs_resp_date
+                                                        })
+                                                    } else {
+                                                        // 비밀글이 아닌 경우
+                                                        csStruct.push({
+                                                            cs_title: rows[i].cs_title,
+                                                            member_name: rows[i].member_name,
+                                                            cs_date: rows[i].cs_date,
+                                                            cs_resp_title: "RE : " + rows[i].cs_title,
+                                                            admin_name: rows[i].admin_name,
+                                                            cs_resp_date: rows[i].cs_resp_date
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                            console.log("Success Search cs.")
+                                            res.status(200).json({
+                                                csStruct
+                                            })
+                                        }
+                                    }
                                 })
                             }
                         }
+                    } else {
+                        let searchCsSql = "select cs_title, member.member_name, cs_date, cs_secret, admin.admin_name, cs_resp_date from cs left join member on cs.member_email = member.member_email left join admin on cs.admin_email = admin.admin_email where cs_delete != ? and member.member_ban != ? and member.member_secede != ? order by cs_id desc limit ?, ?;"
+                        let searchCsParam = [1, 1, 1, 0, rows[0].count]
+                        conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                            if (error) {
+                                console.error(error)
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
+                            } else {
+                                if (rows.length === 0) {
+                                    res.status(401).json({
+                                        content: false
+                                    })
+                                } else {
+                                    let csStruct = []
+                                    for (let i = 0; i < rows.length; i++) {
+                                        // 답변이 없는 경우.
+                                        if (rows[i].cs_resp_date === null) {
+                                            // 비밀글인 경우
+                                            if (rows[i].cs_secret === 1) {
+                                                csStruct.push({
+                                                    cs_title: "[비밀글] " + rows[i].cs_title,
+                                                    member_name: rows[i].member_name,
+                                                    cs_date: rows[i].cs_date
+                                                })
+                                            } else {
+                                                // 비밀글이 아닌 경우
+                                                csStruct.push({
+                                                    cs_title: rows[i].cs_title,
+                                                    member_name: rows[i].member_name,
+                                                    cs_date: rows[i].cs_date
+                                                })
+                                            }
+                                        } else {
+                                            //답변이 있는 경우
+                                            // 비밀글인 경우
+                                            if (rows[i].cs_secret === 1) {
+                                                csStruct.push({
+                                                    cs_title: "[비밀글] " + rows[i].cs_title,
+                                                    member_name: rows[i].member_name,
+                                                    cs_date: rows[i].cs_date,
+                                                    cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                    admin_name: rows[i].admin_name,
+                                                    cs_resp_date: rows[i].cs_resp_date
+                                                })
+                                            } else {
+                                                // 비밀글이 아닌 경우
+                                                csStruct.push({
+                                                    cs_title: rows[i].cs_title,
+                                                    member_name: rows[i].member_name,
+                                                    cs_date: rows[i].cs_date,
+                                                    cs_resp_title: "RE : " + rows[i].cs_title,
+                                                    admin_name: rows[i].admin_name,
+                                                    cs_resp_date: rows[i].cs_resp_date
+                                                })
+                                            }
+                                        }
+                                    }
+                                    console.log("Success Search cs.")
+                                    res.status(200).json({
+                                        csStruct
+                                    })
+                                }
+                            }
+                        })
                     }
-                    console.log("Success Search cs.")
-                    res.status(200).json({
-                        csStruct
-                    })
                 }
             }
             conn.release()
@@ -759,70 +864,179 @@ app.get("/search-title", (req, res) => {
         })
     } else {
         getConnection((conn) => {
-            let searchCsSql = "select cs_title, member_name, cs_date, admin.admin_name, cs.cs_resp_date, cs_secret\n" +
-                "from cs\n" +
-                "         left join member on cs.member_email = member.member_email\n" +
-                "         left join admin on cs.admin_email = admin.admin_email\n" +
-                "where match(cs_title) against(? in boolean mode)\n" +
-                "  and cs_delete != ?\n" +
-                "  and member.member_secede != ?\n" +
-                "  and member.member_ban != ?\n" +
-                "order by cs_id desc\n" +
-                "limit ?;"
-            let searchCsParam = [req.query.cs_title, 1, 1, 1, 15]
-            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from cs join member on cs.member_email = member.member_email\n" +
+                "where match(cs_title) against(? in boolean mode) and cs_delete != ? and member_secede != ?\n" +
+                "and member_ban != ?"
+            let getCountParam = [req.query.cs_title, 1, 1, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let csStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            if (rows[i].cs_resp_date === null) {
-                                if (rows[i].cs_secret === 1) {
-                                    csStruct.push({
-                                        cs_title: "[비밀글] " + rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
                                     })
-                                } else {
-                                    csStruct.push({
-                                        cs_title: rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date
-                                    })
-                                }
-                            } else {
-                                if (rows[i].cs_secret === 1) {
-                                    csStruct.push({
-                                        cs_title: "[비밀글] " + rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date,
-                                        cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
-                                        admin_name: rows[i].admin_name,
-                                        cs_resp_date: rows[i].cs_resp_date
-                                    })
-                                } else {
-                                    csStruct.push({
-                                        cs_title: rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date,
-                                        cs_resp_title: "RE : " + rows[i].cs_title,
-                                        admin_name: rows[i].admin_name,
-                                        cs_resp_date: rows[i].cs_resp_date
+                                else {
+                                    let searchCsSql = "select cs_title, member_name, cs_date, admin.admin_name, cs.cs_resp_date, cs_secret\n" +
+                                        "from cs\n" +
+                                        "         left join member on cs.member_email = member.member_email\n" +
+                                        "         left join admin on cs.admin_email = admin.admin_email\n" +
+                                        "where match(cs_title) against(? in boolean mode)\n" +
+                                        "  and cs_delete != ?\n" +
+                                        "  and member.member_secede != ?\n" +
+                                        "  and member.member_ban != ?\n" +
+                                        "order by cs_id desc\n" +
+                                        "limit ?, ?;"
+                                    let searchCsParam = [req.query.cs_title, 1, 1, 1, start, pageSize]
+                                    conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let csStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    if (rows[i].cs_resp_date === null) {
+                                                        if (rows[i].cs_secret === 1) {
+                                                            csStruct.push({
+                                                                cs_title: "[비밀글] " + rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date
+                                                            })
+                                                        } else {
+                                                            csStruct.push({
+                                                                cs_title: rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date
+                                                            })
+                                                        }
+                                                    } else {
+                                                        if (rows[i].cs_secret === 1) {
+                                                            csStruct.push({
+                                                                cs_title: "[비밀글] " + rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date,
+                                                                cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                                admin_name: rows[i].admin_name,
+                                                                cs_resp_date: rows[i].cs_resp_date
+                                                            })
+                                                        } else {
+                                                            csStruct.push({
+                                                                cs_title: rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date,
+                                                                cs_resp_title: "RE : " + rows[i].cs_title,
+                                                                admin_name: rows[i].admin_name,
+                                                                cs_resp_date: rows[i].cs_resp_date
+                                                            })
+                                                        }
+                                                    }
+                                                }
+                                                res.status(200).json({
+                                                    csStruct
+                                                })
+                                            }
+                                        }
                                     })
                                 }
                             }
+                        } else {
+                            let searchCsSql = "select cs_title, member_name, cs_date, admin.admin_name, cs.cs_resp_date, cs_secret\n" +
+                                "from cs\n" +
+                                "         left join member on cs.member_email = member.member_email\n" +
+                                "         left join admin on cs.admin_email = admin.admin_email\n" +
+                                "where match(cs_title) against(? in boolean mode)\n" +
+                                "  and cs_delete != ?\n" +
+                                "  and member.member_secede != ?\n" +
+                                "  and member.member_ban != ?\n" +
+                                "order by cs_id desc\n" +
+                                "limit ?, ?;"
+                            let searchCsParam = [req.query.cs_title, 1, 1, 1, 0, rows[0].count]
+                            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let csStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            if (rows[i].cs_resp_date === null) {
+                                                if (rows[i].cs_secret === 1) {
+                                                    csStruct.push({
+                                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date
+                                                    })
+                                                } else {
+                                                    csStruct.push({
+                                                        cs_title: rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date
+                                                    })
+                                                }
+                                            } else {
+                                                if (rows[i].cs_secret === 1) {
+                                                    csStruct.push({
+                                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date,
+                                                        cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                        admin_name: rows[i].admin_name,
+                                                        cs_resp_date: rows[i].cs_resp_date
+                                                    })
+                                                } else {
+                                                    csStruct.push({
+                                                        cs_title: rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date,
+                                                        cs_resp_title: "RE : " + rows[i].cs_title,
+                                                        admin_name: rows[i].admin_name,
+                                                        cs_resp_date: rows[i].cs_resp_date
+                                                    })
+                                                }
+                                            }
+                                        }
+                                        res.status(200).json({
+                                            csStruct
+                                        })
+                                    }
+                                }
+                            })
                         }
-                        res.status(200).json({
-                            csStruct
-                        })
                     }
                 }
                 conn.release()

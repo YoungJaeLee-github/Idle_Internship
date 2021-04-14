@@ -21,34 +21,104 @@ app.use(sessionConfig.init())
 // 1. 공고정보 조회(사용자)
 app.get("/list", (req, res) => {
     getConnection((conn) => {
-        let searchSql = "select anno_title, anno_date\n" +
-            "from anno\n" +
-            "order by anno_date desc\n" +
-            "limit ?"
-        let searchParam = [15]
-        conn.query(searchSql, searchParam, function (error, rows) {
+        let getCountSql = "select count(*) as count from anno;"
+        conn.query(getCountSql, function (error, rows) {
             if (error) {
                 console.error(error)
                 res.status(500).json({
                     content: "DB Error"
                 })
             } else {
-                if (rows.length === 0) {
-                    res.status(401).json({
+                if (rows.length === 0 || rows[0].count === 0) {
+                    res.status(404).json({
                         content: false
                     })
                 } else {
-                    let annoStruct = []
-                    for (let i = 0; i < rows.length; i++) {
-                        annoStruct.push({
-                            anno_title: rows[i].anno_title,
-                            anno_date: rows[i].anno_date
+                    let pageSize = 15
+                    if (rows[0].count > pageSize) {
+                        if (req.query.page === undefined || req.query.page === "")
+                            res.status(401).json({
+                                content: "empty page number"
+                            })
+                        else {
+                            let page = req.query.page
+                            let start = 0
+                            if (page <= 0)
+                                page = 1
+                            else
+                                start = (page - 1) * pageSize
+                            const totalPageCount = rows[0].count
+                            if (page > Math.ceil(totalPageCount / pageSize))
+                                res.status(404).json({
+                                    content: "over page"
+                                })
+                            else {
+                                let searchSql = "select anno_title, anno_date\n" +
+                                    "from anno\n" +
+                                    "order by anno_date desc\n" +
+                                    "limit ?, ?"
+                                let searchParam = [start, pageSize]
+                                conn.query(searchSql, searchParam, function (error, rows) {
+                                    if (error) {
+                                        console.error(error)
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
+                                    } else {
+                                        if (rows.length === 0) {
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        } else {
+                                            let annoStruct = []
+                                            for (let i = 0; i < rows.length; i++) {
+                                                annoStruct.push({
+                                                    anno_title: rows[i].anno_title,
+                                                    anno_date: rows[i].anno_date
+                                                })
+                                            }
+
+                                            res.status(200).json({
+                                                annoStruct
+                                            })
+                                        }
+                                    }
+                                })
+                            }
+                        }
+                    } else {
+                        let searchSql = "select anno_title, anno_date\n" +
+                            "from anno\n" +
+                            "order by anno_date desc\n" +
+                            "limit ?, ?"
+                        let searchParam = [0, rows[0].count]
+                        conn.query(searchSql, searchParam, function (error, rows) {
+                            if (error) {
+                                console.error(error)
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
+                            } else {
+                                if (rows.length === 0) {
+                                    res.status(401).json({
+                                        content: false
+                                    })
+                                } else {
+                                    let annoStruct = []
+                                    for (let i = 0; i < rows.length; i++) {
+                                        annoStruct.push({
+                                            anno_title: rows[i].anno_title,
+                                            anno_date: rows[i].anno_date
+                                        })
+                                    }
+
+                                    res.status(200).json({
+                                        annoStruct
+                                    })
+                                }
+                            }
                         })
                     }
-
-                    res.status(200).json({
-                        annoStruct
-                    })
                 }
             }
             conn.release()
@@ -174,34 +244,106 @@ app.get("/search-title", (req, res) => {
         })
     } else {
         getConnection((conn) => {
-            let searchAnnoSql = "select anno_title, anno_date\n" +
-                "from anno\n" +
-                "where match(anno_title) against(? in boolean mode)\n" +
-                "order by anno_date desc\n" +
-                "limit ?;"
-            let searchAnnoParam = [req.query.anno_title, 15]
-            conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from anno" +
+                " where match(anno_title) against(? in boolean mode);"
+            let getCountParam = [req.query.anno_title]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let annoStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            annoStruct.push({
-                                anno_title: rows[i].anno_title,
-                                anno_date: rows[i].anno_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchAnnoSql = "select anno_title, anno_date\n" +
+                                        "from anno\n" +
+                                        "where match(anno_title) against(? in boolean mode)\n" +
+                                        "order by anno_date desc\n" +
+                                        "limit ?, ?;"
+                                    let searchAnnoParam = [req.query.anno_title, start, pageSize]
+                                    conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let annoStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    annoStruct.push({
+                                                        anno_title: rows[i].anno_title,
+                                                        anno_date: rows[i].anno_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    annoStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchAnnoSql = "select anno_title, anno_date\n" +
+                                "from anno\n" +
+                                "where match(anno_title) against(? in boolean mode)\n" +
+                                "order by anno_date desc\n" +
+                                "limit ?, ?;"
+                            let searchAnnoParam = [req.query.anno_title, 0, rows[0].count]
+                            conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let annoStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            annoStruct.push({
+                                                anno_title: rows[i].anno_title,
+                                                anno_date: rows[i].anno_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            annoStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            annoStruct
-                        })
                     }
                 }
                 conn.release()

@@ -27,17 +27,21 @@ app.use(sessionConfig.init())
 app.post("/agree", (req, res) => {
     let chosenAgree = req.body.chosen_agree
     if (chosenAgree === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else
         // TODO 회원 가입 페이지로 redirect.
-        res.cookie("chosen_agree", chosenAgree, {}).status(200).json({"content": true})
+        res.cookie("chosen_agree", chosenAgree, {}).status(200).json({content: true})
 })
 
 // 2. 이메일 인증메일 보내기
 app.post("/email", (req, res) => {
     let tempMemberEmail = req.body.rec_email
     if (tempMemberEmail === undefined || req.cookies.chosen_agree === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let emailCheckQuery = "select member_email, member_secede, member_ban from member where member_email = ?;"
         let selectParam = [tempMemberEmail]
@@ -45,7 +49,9 @@ app.post("/email", (req, res) => {
             conn.query(emailCheckQuery, selectParam, function (error, rows, fields) {
                 if (error) {
                     conn.release()
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
@@ -61,7 +67,9 @@ app.post("/email", (req, res) => {
                             getConnection((conn) => {
                                 conn.query(insertEmailAuth, insertParam, function (error, rows, fields) {
                                     if (error) {
-                                        res.status(500).send("DB Error")
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
                                     } else {
                                         console.log("Success insert emailAuthData")
                                     }
@@ -70,10 +78,14 @@ app.post("/email", (req, res) => {
                             func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
                                 transporter.sendMail(mailContents, function (error, info) {
                                     if (error) {
-                                        res.status(500).send("Mail Error")
+                                        res.status(500).json({
+                                            content: "Mail Error"
+                                        })
                                     } else {
                                         // 이메일 인증 코드 전송 완료.
-                                        res.clearCookie("chosen_agree").status(200).send(true)
+                                        res.clearCookie("chosen_agree").status(200).json({
+                                            content: true
+                                        })
                                         console.log(info.response)
                                     }
                                 })
@@ -87,7 +99,9 @@ app.post("/email", (req, res) => {
                     else if (memberCheckValue === 401 && rows[0].member_secede === 1) {
                         // 탈퇴 전 정지된 사용자인 경우.
                         if (rows[0].member_ban === 1)
-                            res.status(401).send(false)
+                            res.status(401).json({
+                                content: false
+                            })
                         // 탈퇴 전 정지된 사용자가 아닌 경우(재가입).
                         else {
                             func.generateAuthKey().then(authKey => {
@@ -95,7 +109,9 @@ app.post("/email", (req, res) => {
                                 let insertParam = [authKey, 0, tomorrow, 0, tempMemberEmail, req.cookies.chosen_agree]
                                 conn.query(insertEmailAuth, insertParam, function (error, rows, fields) {
                                     if (error) {
-                                        res.status(500).send("DB Error")
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
                                     } else {
                                         console.log("Success insert emailAuthData")
                                     }
@@ -103,10 +119,14 @@ app.post("/email", (req, res) => {
                                 func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
                                     transporter.sendMail(mailContents, function (error, info) {
                                         if (error) {
-                                            res.status(500).send("Mail Error")
+                                            res.status(500).json({
+                                                content: "Mail Error"
+                                            })
                                         } else {
                                             // 이메일 인증 코드 전송 완료.
-                                            res.clearCookie("chosen_agree").status(200).send(true)
+                                            res.clearCookie("chosen_agree").status(200).json({
+                                                content: true
+                                            })
                                             console.log(info.response)
                                         }
                                     })
@@ -120,7 +140,9 @@ app.post("/email", (req, res) => {
                     }
                     // 이미 가입 되어 있고, 탈퇴하지 않은 회원.
                     else
-                        res.status(memberCheckValue).send(false)
+                        res.status(memberCheckValue).json({
+                            content: false
+                        })
                 }
                 conn.release()
             })
@@ -132,7 +154,9 @@ app.post("/email", (req, res) => {
 app.get('/email-check', (req, res) => {
     let authKey = req.query.auth_key
     if (authKey === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         // 폐기 처리 되어 있는 인증 코드에 다시 접근하지 못하도록 구현.
         let disPoseCheck = "select email_key, email_dispose, email_date from email_auth where email_key = ?"
@@ -140,13 +164,19 @@ app.get('/email-check', (req, res) => {
         getConnection((conn) => {
             conn.query(disPoseCheck, authKeyParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     if (rows.length === 0) {
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     } else {
                         if (rows[0].email_dispose === 1)
-                            res.status(401).send(false)
+                            res.status(401).json({
+                                content: false
+                            })
                         else {
                             // 이메일 인증 url을 클릭 하면, 해당 키의 인증 여부, 유효기간 체크. 현재 날짜보다 작으면 폐기 처리.
                             let today = new Date()
@@ -156,10 +186,14 @@ app.get('/email-check', (req, res) => {
                                 let disposeParam = [1, rows[0].email_key]
                                 conn.query(disposeUpdate, disposeParam, function (error, rows, fields) {
                                     if (error) {
-                                        res.status(500).send("DB Error")
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
                                     } else {
                                         console.log("Update Dispose Query is Executed.")
-                                        res.status(401).send(false)
+                                        res.status(401).json({
+                                            content: false
+                                        })
                                     }
                                 })
 
@@ -169,7 +203,9 @@ app.get('/email-check', (req, res) => {
                                 let updateParam = [1, 1, rows[0].email_key]
                                 conn.query(updateSql, updateParam, function (error, rows, fields) {
                                     if (error) {
-                                        res.status(500).send("DB Error")
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
                                     } else
                                         console.log("Update Flag and Dispose Query is Executed.")
                                 })
@@ -180,12 +216,18 @@ app.get('/email-check', (req, res) => {
                                     //TODO 회원 가입 페이지로 redirect.(인증한 이메일 정보를 어떻게 가지고 가야될지 고민.)
                                     req.session.save(function (error) {
                                         if (error)
-                                            res.status(500).send("Session Error")
+                                            res.status(500).json({
+                                                content: "Session Error"
+                                            })
                                         else
-                                            res.status(200).send(true)
+                                            res.status(200).json({
+                                                content: true
+                                            })
                                     })
                                 } else // 키 불일치.
-                                    res.status(401).send(false)
+                                    res.status(401).json({
+                                        content: false
+                                    })
                             }
                         }
                     }
@@ -201,7 +243,9 @@ app.post("/signup", (req, res) => {
     let authKey = req.session.auth_key
     if (authKey === undefined || req.body.member_name === undefined || req.body.member_sex === undefined || req.body.member_birth === undefined ||
         req.body.member_company === undefined || req.body.member_state === undefined || req.body.member_pw === undefined || req.body.member_phone === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let memberName = req.body.member_name
         let memberSex = req.body.member_sex
@@ -216,10 +260,14 @@ app.post("/signup", (req, res) => {
         getConnection((conn) => {
             conn.query(recEmailSql, recEmailParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     if (rows.length === 0)
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     else {
                         let tempEmail = rows[0].rec_email
                         let chosenAgreeValue = rows[0].temp_chosen_agree
@@ -229,7 +277,9 @@ app.post("/signup", (req, res) => {
                         let memberCheckParam = [tempEmail]
                         conn.query(memberCheckSql, memberCheckParam, function (error, rows, fields) {
                             if (error) {
-                                res.status(500).send("DB Error")
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
                             } else {
                                 let isEmail = rows.length === 0 ? null : rows[0].member_email
                                 let memberCheckValue = func.emailCheck(isEmail)
@@ -242,23 +292,31 @@ app.post("/signup", (req, res) => {
                                                 let insertParam = [tempEmail, memberName, memberSex, memberBirth, memberCompany, memberState, encryptedPw, encryptedPhone, 0, chosenAgreeValue, salt, 0]
                                                 conn.query(insertSql, insertParam, function (error, rows, fields) {
                                                     if (error) {
-                                                        res.status(500).send("DB Error")
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
                                                     } else {
                                                         console.log("Insert Into member Query is Executed.")
                                                         req.session.member_email = tempEmail
                                                         req.session.member_pw = encryptedPw
                                                         req.session.save(function (error) {
                                                             if (error)
-                                                                res.status(500).send("Session Error")
+                                                                res.status(500).json({
+                                                                    content: "Session Error"
+                                                                })
                                                             else
                                                                 // TODO 메인 페이지로 redirect
-                                                                res.status(200).send(true)
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
                                                         })
 
                                                         delete req.session.auth_key
                                                         req.session.save(function (error) {
                                                             if (error)
-                                                                res.status(500).send("Session Error")
+                                                                res.status(500).json({
+                                                                    content: "Session Error"
+                                                                })
                                                         })
                                                     }
                                                 })
@@ -269,7 +327,9 @@ app.post("/signup", (req, res) => {
                                                 let memberLogInsertParam = [tempEmail, today, today]
                                                 conn.query(memberLogInsert, memberLogInsertParam, function (error, rows, fields) {
                                                     if (error) {
-                                                        res.status(500).send("DB Error")
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
                                                     } else
                                                         console.log("Success.")
                                                 })
@@ -279,7 +339,9 @@ app.post("/signup", (req, res) => {
                                                 let memberLoginLogParam = [tempEmail, today]
                                                 conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows, fields) {
                                                     if (error) {
-                                                        res.status(500).send("DB Error")
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
                                                     } else
                                                         console.log("Success.")
                                                 })
@@ -291,24 +353,32 @@ app.post("/signup", (req, res) => {
                                                 let updateParam = [memberName, memberSex, memberBirth, memberCompany, memberState, encryptedPw, encryptedPhone, 0, chosenAgreeValue, salt, 0, newEmail]
                                                 conn.query(updateSql, updateParam, function (error, rows, fields) {
                                                     if (error) {
-                                                        res.status(500).send("DB Error")
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
                                                     } else {
                                                         console.log("update query is executed.")
                                                         req.session.member_email = newEmail
                                                         req.session.member_pw = encryptedPw
                                                         req.session.save(function (error) {
                                                             if (error)
-                                                                res.status(500).send("Session Error")
+                                                                res.status(500).json({
+                                                                    content: "Session Error"
+                                                                })
                                                             else
                                                                 // TODO 메인 페이지로 redirect
                                                                 // res.redirect(307, "/")
-                                                                res.status(200).send(true)
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
                                                         })
 
                                                         delete req.session.auth_key
                                                         req.session.save(function (error) {
                                                             if (error)
-                                                                res.status(500).send("Session Error")
+                                                                res.status(500).json({
+                                                                    content: "Session Error"
+                                                                })
                                                         })
                                                     }
                                                 })
@@ -319,12 +389,16 @@ app.post("/signup", (req, res) => {
                                                 let memberLogInsertParam = [newEmail, today, today]
                                                 conn.query(memberLogInsert, memberLogInsertParam, function (error, rows, fields) {
                                                     if (error) {
-                                                        res.status(500).send("DB Error")
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
                                                     } else {
                                                         req.session.join_lately = today
                                                         req.session.save(function (err) {
                                                             if (err)
-                                                                res.status(500).send("Session Error")
+                                                                res.status(500).json({
+                                                                    content: "Session Error"
+                                                                })
                                                         })
                                                         console.log("Success.")
                                                     }
@@ -335,7 +409,9 @@ app.post("/signup", (req, res) => {
                                                 let memberLoginLogParam = [newEmail, today]
                                                 conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows, fields) {
                                                     if (error) {
-                                                        res.status(500).send("DB Error")
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
                                                     } else
                                                         console.log("Success.")
                                                 })
@@ -343,7 +419,9 @@ app.post("/signup", (req, res) => {
                                             // 이메일이 있고, 탈퇴 여부 0 이면 이미 있는 사용자
                                             else
                                                 // memberCheckValue === 401 && rows[0].member_secede === 0
-                                                res.status(401).send(false)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
                                         }).catch(error => {
                                             console.error(error)
                                         })
@@ -368,26 +446,32 @@ app.post("/login", (req, res) => {
     let memberEmail = req.body.member_email
     let tempPw = req.body.member_pw
     if (memberEmail === undefined || tempPw === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let selectSql = "select member_email, member_pw, member_ban, member_salt, member_secede from member where member_email = ?;"
         let selectParam = [memberEmail]
         getConnection((conn) => {
             conn.query(selectSql, selectParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json("DB Error")
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
                     // 회원 테이블에 중복된 이메일이 없으면.
                     if (memberCheckValue === 200)
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     // 회원 테이블에 입력한 이메일이 있고 탈퇴 여부가 0이면(탈퇴하지 않았으면).
                     else if (memberCheckValue === 401 && rows[0].member_secede === 0) {
                         // 정지된 회원인 경우.
                         if (rows[0].member_ban === 1)
                             // TODO 로그인 실패(정지된 회원인 경우). 다시 로그인 화면으로 redirect
-                            res.status(401).send(false)
+                            res.status(401).json({
+                                content: false
+                            })
                         else {
                             crypto.encryptByHash(tempPw, rows[0].member_salt).then(memberPw => {
                                 // 입력한 비밀번호 해시 암호화 한 값과 회원 테이블에 해당 이메일의 비밀번호 값 비교 및 정지여부 확인.
@@ -396,10 +480,14 @@ app.post("/login", (req, res) => {
                                     req.session.member_pw = rows[0].member_pw
                                     req.session.save(function (error) {
                                         if (error)
-                                            res.status(500).send("Session Error")
+                                            res.status(500).json({
+                                                content: "Session Error"
+                                            })
                                         else
                                             // TODO 메인 페이지로 이동
-                                            res.status(200).send(true)
+                                            res.status(200).json({
+                                                content: true
+                                            })
                                     })
 
                                     let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
@@ -407,7 +495,9 @@ app.post("/login", (req, res) => {
                                     let memberLogParam = [today, rows[0].member_email]
                                     conn.query(memberLogUpdate, memberLogParam, function (error, rows, fields) {
                                         if (error) {
-                                            res.status(500).send("DB Error")
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
                                         } else
                                             console.log("update query is executed.")
                                     })
@@ -416,13 +506,17 @@ app.post("/login", (req, res) => {
                                     let memberLoginLogParam = [rows[0].member_email, today]
                                     conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows, fields) {
                                         if (error) {
-                                            res.status(500).send("DB Error")
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
                                         } else
                                             console.log("insert query is executed.")
                                     })
                                 } else {
                                     // TODO 로그인 실패(비밀번호가 틀린 경우). 다시 로그인 화면으로 redirect
-                                    res.status(401).send(false)
+                                    res.status(401).json({
+                                        content: false
+                                    })
                                 }
                             }).catch(error => {
                                 console.error(error)
@@ -430,7 +524,9 @@ app.post("/login", (req, res) => {
                         }
                     } else {
                         // TODO 로그인 실퍠(탈퇴회원인 경우). 다시 로그인 화면으로 redirect
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     }
                     conn.release()
                 }
@@ -444,40 +540,54 @@ app.post("/login", (req, res) => {
 app.post("/logout", (req, res) => {
     req.session.destroy()
     // TODO 로그인 페이지로 이동
-    res.status(200).send(true)
+    res.status(200).json({
+        content: true
+    })
 })
 
 // 7. 회원탈퇴
 app.delete("/secede", (req, res) => {
     let sessionEmail = req.session.member_email
     if (sessionEmail === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let compareSql = "select member_email from member where member_email = ?;"
         let compareParam = [sessionEmail]
         getConnection((conn) => {
             conn.query(compareSql, compareParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     if (rows.length === 0)
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     else {
                         if (sessionEmail === rows[0].member_email) {
                             let updateSql = "update member set member_secede = ? where member_email = ?;"
                             let updateParam = [1, rows[0].member_email]
                             conn.query(updateSql, updateParam, function (error, rows, fields) {
                                 if (error) {
-                                    res.status(500).send("DB Error")
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
                                 } else {
                                     console.log("update query is executed.")
                                     req.session.destroy()
                                     // TODO 메인 페이지로 이동
-                                    res.status(200).send("Success secede.")
+                                    res.status(200).json({
+                                        content: "Success secede."
+                                    })
                                 }
                             })
                         } else {
-                            res.status(401).send(false)
+                            res.status(401).json({
+                                content: false
+                            })
                         }
                     }
                 }
@@ -491,21 +601,27 @@ app.delete("/secede", (req, res) => {
 app.post("/pw/find", (req, res) => {
     let tempEmail = req.body.member_email
     if (tempEmail === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let selectSql = "select member_email, member_ban, member_secede from member where member_email = ?;"
         let selectParma = [tempEmail]
         getConnection((conn) => {
             conn.query(selectSql, selectParma, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     // 사용자 중복 조회.
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
                     // 중복된 이메일이 없음.
                     if (memberCheckValue === 200)
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     // 이메일이 있음.
                     else {
                         // 정지, 탈퇴 여부 체크
@@ -517,7 +633,9 @@ app.post("/pw/find", (req, res) => {
                                 let insertParam = [key, 0, tomorrow, 0, rows[0].member_email]
                                 conn.query(insertSql, insertParam, function (error, rows, fields) {
                                     if (error) {
-                                        res.status(500).send("DB Error")
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
                                     } else
                                         console.log("insert query is executed.")
                                 })
@@ -526,10 +644,14 @@ app.post("/pw/find", (req, res) => {
                                 func.sendEmail(isEmail, urlPassword, "[idea platform] Regarding email authentication.").then(mailContents => {
                                     transporter.sendMail(mailContents, function (error, info) {
                                         if (error)
-                                            res.status(401).send("Mail error")
+                                            res.status(401).json({
+                                                content: "Mail error"
+                                            })
                                         else {
                                             // 이메일 인증 코드 전송 완료.
-                                            res.status(200).send(true)
+                                            res.status(200).json({
+                                                content: true
+                                            })
                                             console.log(info.response)
                                         }
                                     })
@@ -542,7 +664,9 @@ app.post("/pw/find", (req, res) => {
 
                         } else
                             // 정지 혹은 탈퇴한 사용자.
-                            res.status(401).send(false)
+                            res.status(401).json({
+                                content: false
+                            })
                     }
                 }
                 conn.release()
@@ -555,23 +679,31 @@ app.post("/pw/find", (req, res) => {
 app.get('/pw/reset-redirect', (req, res) => {
     let pwKey = req.query.pw_key
     if (pwKey === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let compareSql = "select pw_key, pw_edit, pw_date, pw_dispose, member_email from pw_find where pw_key = ?"
         let compareParam = [pwKey]
         getConnection((conn) => {
             conn.query(compareSql, compareParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     if (rows.length === 0)
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     else {
                         // 키가 일치할 경우
                         if (pwKey === rows[0].pw_key) {
                             // 폐기 여부 조회 폐기 됬으면 접근 불가
                             if (rows[0].pw_dispose === 1)
-                                res.status(401).send(false)
+                                res.status(401).json({
+                                    content: false
+                                })
                             // 폐기 되지 않았을 때
                             else {
                                 // 유효기간이 지났으면 폐기 처리 후 접근 불가
@@ -581,10 +713,14 @@ app.get('/pw/reset-redirect', (req, res) => {
                                     let updateParam = [1, rows[0].pw_key]
                                     conn.query(updateDispose, updateParam, function (error, rows, fields) {
                                         if (error) {
-                                            res.status(500).send("DB Error")
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
                                         } else {
                                             console.log("pw_dispose update")
-                                            res.status(401).send(false)
+                                            res.status(401).json({
+                                                content: false
+                                            })
                                         }
                                     })
                                 }
@@ -593,16 +729,22 @@ app.get('/pw/reset-redirect', (req, res) => {
                                     req.session.pwKey = rows[0].pw_key
                                     req.session.save(function (error) {
                                         if (error)
-                                            res.status(500).send("Session error")
+                                            res.status(500).json({
+                                                content: "Session error"
+                                            })
                                         else
-                                            res.status(200).send(true)
+                                            res.status(200).json({
+                                                content: true
+                                            })
                                     })
                                 }
                             }
                         }
                         // 키 불일치.
                         else {
-                            res.status(401).send(false)
+                            res.status(401).json({
+                                content: false
+                            })
                         }
                     }
                 }
@@ -617,7 +759,9 @@ app.patch("/pw/reset", (req, res) => {
     let newPw = req.body.member_pw
     let pwKey = req.session.pwKey
     if (newPw === undefined || pwKey === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let selectSql = "select member_email from pw_find where pw_key = ?"
         let selectParam = [pwKey]
@@ -625,23 +769,31 @@ app.patch("/pw/reset", (req, res) => {
             // 세션에 있는 키 값으로 사용자 이메일 조회.
             conn.query(selectSql, selectParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     if (rows.length === 0)
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     else {
                         // 해당 이메일과 일치하는 사용자 테이블의 패스워드 암호화 후 업데이트.
                         let memberCheckSql = "select member_email, member_ban, member_secede from member where member_email = ?;"
                         let memberCheckParam = [rows[0].member_email]
                         conn.query(memberCheckSql, memberCheckParam, function (error, rows, fields) {
                             if (error) {
-                                res.status(500).send("DB Error")
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
                             } else {
                                 let isEmail = rows.length === 0 ? null : rows[0].member_email
                                 let memberCheckValue = func.emailCheck(isEmail)
                                 // 해당 사용자가 없음.
                                 if (memberCheckValue === 200)
-                                    res.status(401).send(false)
+                                    res.status(401).json({
+                                        content: false
+                                    })
                                 else if (memberCheckValue === 401 && rows[0].member_ban === 0 && rows[0].member_secede === 0) {
                                     crypto.getSalt().then(salt => {
                                         crypto.encryptByHash(newPw, salt).then(encryptedNewPw => {
@@ -650,10 +802,14 @@ app.patch("/pw/reset", (req, res) => {
                                             let memberUpdateParam = [encryptedNewPw, salt, tempEmail]
                                             conn.query(memberUpdateSql, memberUpdateParam, function (error, rows, fields) {
                                                 if (error) {
-                                                    res.status(500).send("DB Error")
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
                                                 } else {
                                                     // TODO 메인 페이지로 redirect
-                                                    res.status(200).send(true)
+                                                    res.status(200).json({
+                                                        content: true
+                                                    })
                                                 }
                                             })
                                             // 재설정 여부, 폐기 여부 update 후 세션 삭제.
@@ -661,13 +817,17 @@ app.patch("/pw/reset", (req, res) => {
                                             let pwUpdateParam = [1, 1, pwKey]
                                             conn.query(pwUpdateSql, pwUpdateParam, function (error, rows, fields) {
                                                 if (error) {
-                                                    res.status(500).send("DB Error")
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
                                                 } else {
                                                     console.log("update pw log query is executed.")
                                                     delete req.session.pwKey
                                                     req.session.save(function (err) {
                                                         if (err)
-                                                            res.status(500).send("Session Error")
+                                                            res.status(500).json({
+                                                                content: "Session Error"
+                                                            })
                                                     })
                                                 }
                                             })
@@ -678,7 +838,9 @@ app.patch("/pw/reset", (req, res) => {
                                         console.error(error)
                                     })
                                 } else
-                                    res.status(401).send(false)
+                                    res.status(401).json({
+                                        content: false
+                                    })
                             }
                         })
                     }
@@ -694,24 +856,34 @@ app.post("/update", (req, res) => {
     let memberPw = req.body.member_pw
     let memberEmail = req.session.member_email
     if (memberPw === undefined || memberEmail === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let compareSql = "select member_pw, member_salt from member where member_email = ?"
         let compareParam = [memberEmail]
         getConnection((conn) => {
             conn.query(compareSql, compareParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     if (rows.length === 0)
-                        res.status(401).send(false)
+                        res.status(401).json({
+                            content: false
+                        })
                     else {
                         crypto.encryptByHash(memberPw, rows[0].member_salt).then(encryptedPw => {
                             if (encryptedPw !== rows[0].member_pw)
-                                res.status(401).send(false)
+                                res.status(401).json({
+                                    content: false
+                                })
                             else
                                 // TODO 회원정보 상세 페이지로 redirect.
-                                res.status(200).send(true)
+                                res.status(200).json({
+                                    content: true
+                                })
                         }).catch(error => {
                             console.error(error)
                         })
@@ -728,7 +900,9 @@ app.patch("/update-detail", (req, res) => {
     let memberEmail = req.session.member_email
     if (memberEmail === undefined || req.body.member_name === undefined || req.body.member_pw === undefined || req.body.member_sex === undefined ||
         req.body.member_birth === undefined || req.body.member_phone === undefined || req.body.member_company === undefined || req.body.member_state === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let memberName = req.body.member_name
         let memberPw = req.body.member_pw
@@ -746,15 +920,21 @@ app.patch("/update-detail", (req, res) => {
                     getConnection((conn) => {
                         conn.query(updateSql, updateParam, function (error, rows, fields) {
                             if (error) {
-                                res.status(500).send("DB Error")
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
                             } else {
                                 req.session.member_pw = encryptedPw
                                 req.session.save(function (err) {
                                     if (err)
-                                        res.status(500).send("Session Error")
+                                        res.status(500).json({
+                                            content: "Session Error"
+                                        })
                                     else
                                         // TODO 마이페이지로 redirect.
-                                        res.status(201).send(true)
+                                        res.status(201).json({
+                                            content: true
+                                        })
                                 })
                             }
                             conn.release()
@@ -776,19 +956,100 @@ app.patch("/update-detail", (req, res) => {
 app.get("/myidea", (req, res) => {
     let sessionEmail = req.session.member_email
     if (sessionEmail === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
-        let ideaSql = "select idea_title, idea_date from idea where member_email = ? order by idea_date desc limit ?;"
-        let ideaParam = [sessionEmail, 15]
         getConnection((conn) => {
-            conn.query(ideaSql, ideaParam, function (error, rows, fields) {
+            let getCountSql = "select count(*) as count from idea where idea_delete != ? and member_email = ?;"
+            let getCountParam = [1, sessionEmail]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
-                    if (rows.length === 0)
-                        res.status(401).send(false)
-                    else {
-                        res.send(rows)
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
+                            content: false
+                        })
+                    } else {
+                        let pageSize = 15
+                        if(rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let ideaSql = "select idea_title, idea_date from idea where idea_delete != ? and member_email = ? order by idea_date desc limit ?, ?;"
+                                    let ideaParam = [1, sessionEmail, start, pageSize]
+                                    conn.query(ideaSql, ideaParam, function (error, rows) {
+                                        if (error) {
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            else {
+                                                let myIdeaStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    myIdeaStruct.push({
+                                                        idea_title: rows[i].idea_title,
+                                                        idea_date: rows[i].idea_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    myIdeaStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let ideaSql = "select idea_title, idea_date from idea where idea_delete != ? and member_email = ? order by idea_date desc limit ?, ?;"
+                            let ideaParam = [1, sessionEmail, 0, rows[0].count]
+                            conn.query(ideaSql, ideaParam, function (error, rows) {
+                                if (error) {
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let myIdeaStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            myIdeaStruct.push({
+                                                idea_title: rows[i].idea_title,
+                                                idea_date: rows[i].idea_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            myIdeaStruct
+                                        })
+                                    }
+                                }
+                            })
+                        }
                     }
                 }
                 conn.release()
@@ -801,27 +1062,114 @@ app.get("/myidea", (req, res) => {
 app.get("/marked", (req, res) => {
     let sessionEmail = req.session.member_email
     if (sessionEmail === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
-        let markedSql = "select anno_title, anno_date from inter_anno as ia join anno as a on ia.anno_id = a.anno_id where member_email = ?" +
-            "order by anno_date desc limit ?;"
-        let markedParam = [sessionEmail, 15]
         getConnection((conn) => {
-            conn.query(markedSql, markedParam, function (error, rows, fields) {
+            let getCountSql = "select count(*) as count from inter_anno join member on inter_anno.member_email = member.member_email where inter_anno.member_email = ? and member_ban != ? and member_secede != ?;"
+            let getCountParam = [sessionEmail, 1, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
-                    if (rows.length === 0)
-                        res.status(401).send(false)
-                    else {
-                        let annoInfo = []
-                        for (let i = 0; i < rows.length; i++) {
-                            annoInfo[i] = {
-                                "anno_title": rows[i].anno_title,
-                                "anno_date": rows[i].anno_date
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
+                            content: false
+                        })
+                    } else {
+                        let pageSize = 15
+                        if(rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let markedSql = "select anno_title, anno_date\n" +
+                                        "from inter_anno as ia\n" +
+                                        "         join anno as a on ia.anno_id = a.anno_id\n" +
+                                        "join member on ia.member_email = member.member_email\n" +
+                                        "where ia.member_email = ? and member_ban != ? and member_secede != ?\n" +
+                                        "order by anno_date\n" +
+                                        "    desc\n" +
+                                        "limit ?, ?;"
+                                    let markedParam = [sessionEmail, 1, 1, start, pageSize]
+                                    conn.query(markedSql, markedParam, function (error, rows) {
+                                        if (error) {
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            else {
+                                                let interAnnoInfo = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    interAnnoInfo.push({
+                                                        "anno_title": rows[i].anno_title,
+                                                        "anno_date": rows[i].anno_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    interAnnoInfo
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
                             }
+                        } else {
+                            let markedSql = "select anno_title, anno_date\n" +
+                                "from inter_anno as ia\n" +
+                                "         join anno as a on ia.anno_id = a.anno_id\n" +
+                                "join member on ia.member_email = member.member_email\n" +
+                                "where ia.member_email = ? and member_ban != ? and member_secede != ?\n" +
+                                "order by anno_date\n" +
+                                "    desc\n" +
+                                "limit ?, ?;"
+                            let markedParam = [sessionEmail, 1, 1, 0, rows[0].count]
+                            conn.query(markedSql, markedParam, function (error, rows) {
+                                if (error) {
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let interAnnoInfo = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            interAnnoInfo.push({
+                                                "anno_title": rows[i].anno_title,
+                                                "anno_date": rows[i].anno_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            interAnnoInfo
+                                        })
+                                    }
+                                }
+                            })
                         }
-                        res.status(201).json(annoInfo)
                     }
                 }
                 conn.release()

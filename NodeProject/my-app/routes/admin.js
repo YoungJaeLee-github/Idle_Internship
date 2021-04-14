@@ -289,14 +289,14 @@ app.post("/member-check", (req, res) => {
                     let value = func.emailCheck(isEmail)
                     // 중복된 이메일이 없음
                     if (value === 200)
-                        res.status(200).json({ content:"empty"})
+                        res.status(200).json({content: "empty"})
                     else if (value === 401 && rows[0].member_secede === 0) {
                         // 정지되지 않은 회원.(정상적인 회원)
                         if (rows[0].member_ban === 0)
-                            res.status(200).json({ content:"OK"})
+                            res.status(200).json({content: "OK"})
                         else
                             // member_ban === 1 정지된 회원
-                            res.status(401).json({content:"ban"})
+                            res.status(401).json({content: "ban"})
                     } else {
                         // 탈퇴한 회원
                         res.status(401).json({content: "secede"})
@@ -312,23 +312,33 @@ app.post("/member-check", (req, res) => {
 app.post('/check', (req, res) => {
     let adminEmail = req.body.admin_email
     if (adminEmail === undefined)
-        res.status(401).send("Empty Param")
+        res.status(401).json({
+            content: "Empty Param"
+        })
     else {
         let adminCheckSql = "select admin_email, admin_secede from admin where admin_email = ?;"
         let adminCheckParam = [adminEmail]
         getConnection((conn) => {
             conn.query(adminCheckSql, adminCheckParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].admin_email
                     let emailCheckValue = func.emailCheck(isEmail)
                     if (emailCheckValue === 200)
-                        res.status(200).send("No admin email.")
+                        res.status(200).json({
+                            content: "No admin email."
+                        })
                     else if (emailCheckValue === 401 && rows[0].admin_secede === 1)
-                        res.status(200).send("No admin email.")
+                        res.status(200).json({
+                            content: "No admin email."
+                        })
                     else
-                        res.status(401).send("Already exists admin email.")
+                        res.status(401).json({
+                            content: "Already exists admin email."
+                        })
                 }
                 conn.release()
             })
@@ -340,7 +350,9 @@ app.post('/check', (req, res) => {
 app.post("/signup", (req, res) => {
     if (req.body.admin_email === undefined || req.body.admin_name === undefined || req.body.admin_sex === undefined ||
         req.body.admin_birth === undefined || req.body.admin_state === undefined || req.body.admin_pw === undefined || req.body.admin_phone === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let adminEmail = req.body.admin_email
         let adminName = req.body.admin_name
@@ -357,7 +369,9 @@ app.post("/signup", (req, res) => {
             conn.query(searchEmailSql, searchEmailParam, function (error, rows, fields) {
                 if (error) {
                     console.error(error)
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].admin_email
                     let emailCheckValue = func.emailCheck(isEmail)
@@ -371,17 +385,23 @@ app.post("/signup", (req, res) => {
                                     conn.query(signupSql, signupParam, function (error, rows, fields) {
                                         if (error) {
                                             console.error(error)
-                                            res.status(500).send("DB Error")
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
                                         } else {
                                             console.log("admin signup success.")
                                             req.session.admin_email = adminEmail
                                             req.session.admin_pw = encryptedPw
                                             req.session.save(function (error) {
                                                 if (error)
-                                                    res.status(500).send("Session Error")
+                                                    res.status(500).json({
+                                                        content: "Session Error"
+                                                    })
                                                 else
                                                     // TODO 메인 페이지로 redirect
-                                                    res.status(200).send(true)
+                                                    res.status(200).json({
+                                                        content: true
+                                                    })
                                             })
                                         }
                                     })
@@ -390,7 +410,9 @@ app.post("/signup", (req, res) => {
                                     conn.query(insertLogSql, insertLogParam, function (error, rows, fields) {
                                         if (error) {
                                             console.error(error)
-                                            res.status(500).send("DB Error")
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
                                         } else {
                                             console.log("insert log success.")
                                         }
@@ -402,17 +424,23 @@ app.post("/signup", (req, res) => {
                                         let updateSignupParam = [adminName, adminSex, adminBirth, adminState, encryptedPw, encryptedPhone, 0, salt, adminEmail]
                                         conn.query(updateSignupSql, updateSignupParam, function (error, rows, fields) {
                                             if (error) {
-                                                res.status(500).send("DB Error")
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
                                             } else {
                                                 console.log("admin signup(update) success.")
                                                 req.session.admin_email = adminEmail
                                                 req.session.admin_pw = encryptedPw
                                                 req.session.save(function (error) {
                                                     if (error)
-                                                        res.status(500).send("Session Error")
+                                                        res.status(500).json({
+                                                            content: "Session Error"
+                                                        })
                                                     else
                                                         // TODO 메인 페이지로 redirect
-                                                        res.status(200).send(true)
+                                                        res.status(200).json({
+                                                            content: true
+                                                        })
                                                 })
                                             }
                                         })
@@ -421,14 +449,18 @@ app.post("/signup", (req, res) => {
                                         conn.query(insertLogSql, insertLogParam, function (error, rows, fields) {
                                             if (error) {
                                                 console.error(error)
-                                                res.status(500).send("DB Error")
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
                                             } else {
                                                 console.log("insert log success.")
                                             }
                                         })
                                     } else {
                                         // 이미 가입 되어 있는 회원.
-                                        res.status(401).send("already exists.")
+                                        res.status(401).json({
+                                            content: "already exists."
+                                        })
                                     }
                                 }
                             }).catch(error => {
@@ -450,7 +482,9 @@ app.post("/signup", (req, res) => {
 // 4. 관리자 로그인
 app.post("/login", (req, res) => {
     if (req.body.admin_email === undefined || req.body.admin_pw === undefined)
-        res.status(401).send("false")
+        res.status(401).json({
+            content: false
+        })
     else {
         let adminEmail = req.body.admin_email
         let adminPw = req.body.admin_pw
@@ -460,15 +494,21 @@ app.post("/login", (req, res) => {
             conn.query(searchEmailSql, searchEmailParam, function (error, rows, fields) {
                 if (error) {
                     console.error(error)
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     let emailCheckValue = func.emailCheck(rows.length === 0 ? null : rows[0].admin_email)
                     if (emailCheckValue === 200)
-                        res.status(401).send("Wrong Email")
+                        res.status(401).json({
+                            content: "Wrong Email"
+                        })
                     else {
                         // 탈퇴한 관리자.
                         if (rows[0].admin_secede === 1)
-                            res.status(401).send("secede admin")
+                            res.status(401).json({
+                                content: "secede admin"
+                            })
                         // 정상적인 관리자.
                         else {
                             crypto.encryptByHash(adminPw, rows[0].admin_salt).then(encryptedPw => {
@@ -477,7 +517,9 @@ app.post("/login", (req, res) => {
                                     req.session.admin_pw = encryptedPw
                                     req.session.save(function (error) {
                                         if (error)
-                                            res.status(500).send("Session Error")
+                                            res.status(500).json({
+                                                content: "Session Error"
+                                            })
                                         else
                                             // TODO 메인페이지로
                                             res.status(200).json({
@@ -489,13 +531,17 @@ app.post("/login", (req, res) => {
                                     conn.query(updateLogSql, updateLogParam, function (error, rows, fields) {
                                         if (error) {
                                             console.error(error)
-                                            res.status(500).send("DB Error")
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
                                         } else {
                                             console.log("update login log success.")
                                         }
                                     })
                                 } else {
-                                    res.status(401).send("Wrong Password")
+                                    res.status(401).json({
+                                        content: "Wrong Password"
+                                    })
                                 }
                             }).catch(error => {
                                 console.error(error)
@@ -1703,56 +1749,149 @@ app.get("/idea/list", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchIdeaSql = "select idea_title, idea_date from idea join member where idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? and idea_delete != ? order by idea_id desc limit ?;"
-            let searchIdeaParam = [1, 1, 1, 15]
-            let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
-            let searchRankParam = [1, 1, 10]
-            conn.query(searchRankSql, searchRankParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from idea join member on idea.member_email = member.member_email where member_secede != ? and member_ban != ? and idea_delete != ?;"
+            let getCountParam = [1, 1, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0)
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
-                    else {
-                        let rankStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            rankStruct.push({
-                                member_rank: rows[i].member_rank,
-                                member_name: rows[i].member_name,
-                                save_point: rows[i].save_point
-                            })
-                        }
-                        conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
-                            if (error) {
-                                console.error(error)
-                                res.status(500).json({
-                                    content: "DB Error"
+                    } else {
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
                                 })
-                            } else {
-                                if (rows.length === 0)
-                                    res.status(401).json({
-                                        content: false
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
                                     })
                                 else {
-                                    let ideaStruct = []
-                                    for (let i = 0; i < rows.length; i++) {
-                                        ideaStruct.push({
-                                            idea_title: rows[i].idea_title,
-                                            idea_date: rows[i].idea_date
-                                        })
-                                    }
-                                    res.status(200).json({
-                                        ideaStruct,
-                                        rankStruct
+                                    let searchIdeaSql = "select idea_title, idea_date from idea join member where idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? and idea_delete != ? order by idea_id desc limit ?, ?;"
+                                    let searchIdeaParam = [1, 1, 1, start, pageSize]
+                                    let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
+                                    let searchRankParam = [1, 1, 10]
+                                    conn.query(searchRankSql, searchRankParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            else {
+                                                let rankStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    rankStruct.push({
+                                                        member_rank: rows[i].member_rank,
+                                                        member_name: rows[i].member_name,
+                                                        save_point: rows[i].save_point
+                                                    })
+                                                }
+                                                conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                                                    if (error) {
+                                                        console.error(error)
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
+                                                    } else {
+                                                        if (rows.length === 0)
+                                                            res.status(401).json({
+                                                                content: false
+                                                            })
+                                                        else {
+                                                            let ideaStruct = []
+                                                            for (let i = 0; i < rows.length; i++) {
+                                                                ideaStruct.push({
+                                                                    idea_title: rows[i].idea_title,
+                                                                    idea_date: rows[i].idea_date
+                                                                })
+                                                            }
+                                                            res.status(200).json({
+                                                                ideaStruct,
+                                                                rankStruct
+                                                            })
+                                                        }
+                                                    }
+                                                })
+                                            }
+                                        }
                                     })
                                 }
                             }
-                        })
+                        } else {
+                            let searchIdeaSql = "select idea_title, idea_date from idea join member where idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? and idea_delete != ? order by idea_id desc limit ?, ?;"
+                            let searchIdeaParam = [1, 1, 1, 0, rows[0].count]
+                            let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
+                            let searchRankParam = [1, 1, 10]
+                            conn.query(searchRankSql, searchRankParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let rankStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            rankStruct.push({
+                                                member_rank: rows[i].member_rank,
+                                                member_name: rows[i].member_name,
+                                                save_point: rows[i].save_point
+                                            })
+                                        }
+                                        conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0)
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                else {
+                                                    let ideaStruct = []
+                                                    for (let i = 0; i < rows.length; i++) {
+                                                        ideaStruct.push({
+                                                            idea_title: rows[i].idea_title,
+                                                            idea_date: rows[i].idea_date
+                                                        })
+                                                    }
+                                                    res.status(200).json({
+                                                        ideaStruct,
+                                                        rankStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                            })
+                        }
                     }
                 }
                 conn.release()
@@ -1946,32 +2085,103 @@ app.get("/idea/search-title", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchIdeaSql = "select idea_title, idea_date\n" +
-                "from idea join member\n" +
-                "where match(idea_title) against(? in boolean mode) and idea_delete != ? and idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? order by idea_id desc limit ?;"
-            let searchIdeaParam = [req.query.idea_title, 1, 1, 1, 15]
-            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from idea join member on idea.member_email = member.member_email\n" +
+                "where match(idea_title) against(? in boolean mode) and idea_delete != ? and member_secede != ?\n" +
+                "and member_ban != ?"
+            let getCountParam = [req.query.idea_title, 1, 1, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let ideaStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            ideaStruct.push({
-                                idea_title: rows[i].idea_title,
-                                idea_date: rows[i].idea_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchIdeaSql = "select idea_title, idea_date\n" +
+                                        "from idea join member\n" +
+                                        "where match(idea_title) against(? in boolean mode) and idea_delete != ? and idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? order by idea_id desc limit ?, ?;"
+                                    let searchIdeaParam = [req.query.idea_title, 1, 1, 1, start, pageSize]
+                                    conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let ideaStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    ideaStruct.push({
+                                                        idea_title: rows[i].idea_title,
+                                                        idea_date: rows[i].idea_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    ideaStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchIdeaSql = "select idea_title, idea_date\n" +
+                                "from idea join member\n" +
+                                "where match(idea_title) against(? in boolean mode) and idea_delete != ? and idea.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? order by idea_id desc limit ?, ?;"
+                            let searchIdeaParam = [req.query.idea_title, 1, 1, 1, 0, rows[0].count]
+                            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let ideaStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            ideaStruct.push({
+                                                idea_title: rows[i].idea_title,
+                                                idea_date: rows[i].idea_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            ideaStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            ideaStruct
-                        })
                     }
                 }
                 conn.release()
@@ -1988,30 +2198,171 @@ app.get("/cs/list", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchCsSql = "select cs_title, cs_date from cs join member where cs.member_email = member.member_email and member.member_secede != ? and member.member_ban != ? and cs_delete != ? order by cs_id desc limit ?;"
-            let searchCsParam = [1, 1, 1, 15]
-            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from cs join member on cs.member_email = member.member_email where member_secede != ? and member_ban != ? and cs_delete != ?;"
+            let getCountParam = [1, 1, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0)
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
-                    else {
-                        let csStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            csStruct.push({
-                                cs_title: rows[i].cs_title,
-                                cs_date: rows[i].cs_date
+                    } else {
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchCsSql = "select cs_title, member.member_name, cs_date, cs_secret, admin.admin_name, cs_resp_date from cs left join member on cs.member_email = member.member_email left join admin on cs.admin_email = admin.admin_email where cs_delete != ? and member.member_ban != ? and member.member_secede != ? order by cs_id desc limit ?, ?;"
+                                    let searchCsParam = [1, 1, 1, start, pageSize]
+                                    conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            else {
+                                                let csStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    // 답변이 없는 경우.
+                                                    if (rows[i].cs_resp_date === null) {
+                                                        // 비밀글인 경우
+                                                        if (rows[i].cs_secret === 1) {
+                                                            csStruct.push({
+                                                                cs_title: "[비밀글] " + rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date
+                                                            })
+                                                        } else {
+                                                            // 비밀글이 아닌 경우
+                                                            csStruct.push({
+                                                                cs_title: rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date
+                                                            })
+                                                        }
+                                                    } else {
+                                                        //답변이 있는 경우
+                                                        // 비밀글인 경우
+                                                        if (rows[i].cs_secret === 1) {
+                                                            csStruct.push({
+                                                                cs_title: "[비밀글] " + rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date,
+                                                                cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                                admin_name: rows[i].admin_name,
+                                                                cs_resp_date: rows[i].cs_resp_date
+                                                            })
+                                                        } else {
+                                                            // 비밀글이 아닌 경우
+                                                            csStruct.push({
+                                                                cs_title: rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date,
+                                                                cs_resp_title: "RE : " + rows[i].cs_title,
+                                                                admin_name: rows[i].admin_name,
+                                                                cs_resp_date: rows[i].cs_resp_date
+                                                            })
+                                                        }
+                                                    }
+                                                }
+                                                res.status(200).json({
+                                                    csStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchCsSql = "select cs_title, member.member_name, cs_date, cs_secret, admin.admin_name, cs_resp_date from cs left join member on cs.member_email = member.member_email left join admin on cs.admin_email = admin.admin_email where cs_delete != ? and member.member_ban != ? and member.member_secede != ? order by cs_id desc limit ?, ?;"
+                            let searchCsParam = [1, 1, 1, 0, rows[0].count]
+                            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let csStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            // 답변이 없는 경우.
+                                            if (rows[i].cs_resp_date === null) {
+                                                // 비밀글인 경우
+                                                if (rows[i].cs_secret === 1) {
+                                                    csStruct.push({
+                                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date
+                                                    })
+                                                } else {
+                                                    // 비밀글이 아닌 경우
+                                                    csStruct.push({
+                                                        cs_title: rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date
+                                                    })
+                                                }
+                                            } else {
+                                                //답변이 있는 경우
+                                                // 비밀글인 경우
+                                                if (rows[i].cs_secret === 1) {
+                                                    csStruct.push({
+                                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date,
+                                                        cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                        admin_name: rows[i].admin_name,
+                                                        cs_resp_date: rows[i].cs_resp_date
+                                                    })
+                                                } else {
+                                                    // 비밀글이 아닌 경우
+                                                    csStruct.push({
+                                                        cs_title: rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date,
+                                                        cs_resp_title: "RE : " + rows[i].cs_title,
+                                                        admin_name: rows[i].admin_name,
+                                                        cs_resp_date: rows[i].cs_resp_date
+                                                    })
+                                                }
+                                            }
+                                        }
+                                        res.status(200).json({
+                                            csStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            csStruct
-                        })
                     }
                 }
                 conn.release()
@@ -2251,70 +2602,179 @@ app.get("/cs/search-title", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchCsSql = "select cs_title, member_name, cs_date, admin.admin_name, cs.cs_resp_date, cs_secret\n" +
-                "from cs\n" +
-                "         left join member on cs.member_email = member.member_email\n" +
-                "         left join admin on cs.admin_email = admin.admin_email\n" +
-                "where match(cs_title) against(? in boolean mode)\n" +
-                "  and cs_delete != ?\n" +
-                "  and member.member_secede != ?\n" +
-                "  and member.member_ban != ?\n" +
-                "order by cs_id desc\n" +
-                "limit ?;"
-            let searchCsParam = [req.query.cs_title, 1, 1, 1, 15]
-            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from cs join member on cs.member_email = member.member_email\n" +
+                "where match(cs_title) against(? in boolean mode) and cs_delete != ? and member_secede != ?\n" +
+                "and member_ban != ?"
+            let getCountParam = [req.query.cs_title, 1, 1, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let csStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            if (rows[i].cs_resp_date === null) {
-                                if (rows[i].cs_secret === 1) {
-                                    csStruct.push({
-                                        cs_title: "[비밀글] " + rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
                                     })
-                                } else {
-                                    csStruct.push({
-                                        cs_title: rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date
-                                    })
-                                }
-                            } else {
-                                if (rows[i].cs_secret === 1) {
-                                    csStruct.push({
-                                        cs_title: "[비밀글] " + rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date,
-                                        cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
-                                        admin_name: rows[i].admin_name,
-                                        cs_resp_date: rows[i].cs_resp_date
-                                    })
-                                } else {
-                                    csStruct.push({
-                                        cs_title: rows[i].cs_title,
-                                        member_name: rows[i].member_name,
-                                        cs_date: rows[i].cs_date,
-                                        cs_resp_title: "RE : " + rows[i].cs_title,
-                                        admin_name: rows[i].admin_name,
-                                        cs_resp_date: rows[i].cs_resp_date
+                                else {
+                                    let searchCsSql = "select cs_title, member_name, cs_date, admin.admin_name, cs.cs_resp_date, cs_secret\n" +
+                                        "from cs\n" +
+                                        "         left join member on cs.member_email = member.member_email\n" +
+                                        "         left join admin on cs.admin_email = admin.admin_email\n" +
+                                        "where match(cs_title) against(? in boolean mode)\n" +
+                                        "  and cs_delete != ?\n" +
+                                        "  and member.member_secede != ?\n" +
+                                        "  and member.member_ban != ?\n" +
+                                        "order by cs_id desc\n" +
+                                        "limit ?, ?;"
+                                    let searchCsParam = [req.query.cs_title, 1, 1, 1, start, pageSize]
+                                    conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let csStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    if (rows[i].cs_resp_date === null) {
+                                                        if (rows[i].cs_secret === 1) {
+                                                            csStruct.push({
+                                                                cs_title: "[비밀글] " + rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date
+                                                            })
+                                                        } else {
+                                                            csStruct.push({
+                                                                cs_title: rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date
+                                                            })
+                                                        }
+                                                    } else {
+                                                        if (rows[i].cs_secret === 1) {
+                                                            csStruct.push({
+                                                                cs_title: "[비밀글] " + rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date,
+                                                                cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                                admin_name: rows[i].admin_name,
+                                                                cs_resp_date: rows[i].cs_resp_date
+                                                            })
+                                                        } else {
+                                                            csStruct.push({
+                                                                cs_title: rows[i].cs_title,
+                                                                member_name: rows[i].member_name,
+                                                                cs_date: rows[i].cs_date,
+                                                                cs_resp_title: "RE : " + rows[i].cs_title,
+                                                                admin_name: rows[i].admin_name,
+                                                                cs_resp_date: rows[i].cs_resp_date
+                                                            })
+                                                        }
+                                                    }
+                                                }
+                                                res.status(200).json({
+                                                    csStruct
+                                                })
+                                            }
+                                        }
                                     })
                                 }
                             }
+                        } else {
+                            let searchCsSql = "select cs_title, member_name, cs_date, admin.admin_name, cs.cs_resp_date, cs_secret\n" +
+                                "from cs\n" +
+                                "         left join member on cs.member_email = member.member_email\n" +
+                                "         left join admin on cs.admin_email = admin.admin_email\n" +
+                                "where match(cs_title) against(? in boolean mode)\n" +
+                                "  and cs_delete != ?\n" +
+                                "  and member.member_secede != ?\n" +
+                                "  and member.member_ban != ?\n" +
+                                "order by cs_id desc\n" +
+                                "limit ?, ?;"
+                            let searchCsParam = [req.query.cs_title, 1, 1, 1, 0, rows[0].count]
+                            conn.query(searchCsSql, searchCsParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let csStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            if (rows[i].cs_resp_date === null) {
+                                                if (rows[i].cs_secret === 1) {
+                                                    csStruct.push({
+                                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date
+                                                    })
+                                                } else {
+                                                    csStruct.push({
+                                                        cs_title: rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date
+                                                    })
+                                                }
+                                            } else {
+                                                if (rows[i].cs_secret === 1) {
+                                                    csStruct.push({
+                                                        cs_title: "[비밀글] " + rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date,
+                                                        cs_resp_title: "[비밀글] RE : " + rows[i].cs_title,
+                                                        admin_name: rows[i].admin_name,
+                                                        cs_resp_date: rows[i].cs_resp_date
+                                                    })
+                                                } else {
+                                                    csStruct.push({
+                                                        cs_title: rows[i].cs_title,
+                                                        member_name: rows[i].member_name,
+                                                        cs_date: rows[i].cs_date,
+                                                        cs_resp_title: "RE : " + rows[i].cs_title,
+                                                        admin_name: rows[i].admin_name,
+                                                        cs_resp_date: rows[i].cs_resp_date
+                                                    })
+                                                }
+                                            }
+                                        }
+                                        res.status(200).json({
+                                            csStruct
+                                        })
+                                    }
+                                }
+                            })
                         }
-                        res.status(200).json({
-                            csStruct
-                        })
                     }
                 }
                 conn.release()
@@ -2330,32 +2790,99 @@ app.get("/anno/list", (req, res) => {
             content: false
         })
     else {
-        let searchAnnoSql = "select anno_flag, anno_title, anno_date from anno order by anno_flag DESC limit ?"
-        let searchAnnoParam = [15]
         getConnection((conn) => {
-            conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from anno;"
+            conn.query(getCountSql, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0)
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
-                    else {
-                        let annoStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            annoStruct.push({
-                                anno_flag: rows[i].anno_flag,
-                                anno_title: rows[i].anno_title,
-                                anno_date: rows[i].anno_date
+                    } else {
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchAnnoSql = "select anno_flag, anno_title, anno_date from anno order by anno_flag DESC limit ?, ?"
+                                    let searchAnnoParam = [start, pageSize]
+                                    conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            else {
+                                                let annoStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    annoStruct.push({
+                                                        anno_flag: rows[i].anno_flag,
+                                                        anno_title: rows[i].anno_title,
+                                                        anno_date: rows[i].anno_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    annoStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchAnnoSql = "select anno_flag, anno_title, anno_date from anno order by anno_flag DESC limit ?, ?"
+                            let searchAnnoParam = [0, rows[0].count]
+                            conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let annoStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            annoStruct.push({
+                                                anno_flag: rows[i].anno_flag,
+                                                anno_title: rows[i].anno_title,
+                                                anno_date: rows[i].anno_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            annoStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            annoStruct
-                        })
                     }
                 }
                 conn.release()
@@ -2408,32 +2935,102 @@ app.get("/anno/search-title", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchAnnoSql = "select anno_title, anno_date\n" +
-                "from anno\n" +
-                "where match(anno_title) against(? in boolean mode) order by anno_id desc limit ?;"
-            let searchAnnoParam = [req.query.anno_title, 15]
-            conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from anno" +
+                " where match(anno_title) against(? in boolean mode);"
+            let getCountParam = [req.query.anno_title]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let annoStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            annoStruct.push({
-                                anno_title: rows[i].anno_title,
-                                anno_date: rows[i].anno_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchAnnoSql = "select anno_title, anno_date\n" +
+                                        "from anno\n" +
+                                        "where match(anno_title) against(? in boolean mode) order by anno_id desc limit ?, ?;"
+                                    let searchAnnoParam = [req.query.anno_title, start, pageSize]
+                                    conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let annoStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    annoStruct.push({
+                                                        anno_title: rows[i].anno_title,
+                                                        anno_date: rows[i].anno_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    annoStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchAnnoSql = "select anno_title, anno_date\n" +
+                                "from anno\n" +
+                                "where match(anno_title) against(? in boolean mode) order by anno_id desc limit ?, ?;"
+                            let searchAnnoParam = [req.query.anno_title, 0, rows[0].count]
+                            conn.query(searchAnnoSql, searchAnnoParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let annoStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            annoStruct.push({
+                                                anno_title: rows[i].anno_title,
+                                                anno_date: rows[i].anno_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            annoStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            annoStruct
-                        })
                     }
                 }
                 conn.release()
@@ -2450,30 +3047,97 @@ app.get("/notice/list", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchNoticeSql = "select notice_title, notice_date from notice where notice_delete != ? order by notice_id desc limit ?;"
-            let searchNoticeParam = [1, 15]
-            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from notice where notice_delete != ?;"
+            let getCountParam = [1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0)
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
-                    else {
-                        let noticeStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            noticeStruct.push({
-                                notice_title: rows[i].notice_title,
-                                notice_date: rows[i].notice_date
+                    } else {
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchNoticeSql = "select notice_title, notice_date from notice where notice_delete != ? order by notice_id desc limit ?, ?;"
+                                    let searchNoticeParam = [1, start, pageSize]
+                                    conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            else {
+                                                let noticeStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    noticeStruct.push({
+                                                        notice_title: rows[i].notice_title,
+                                                        notice_date: rows[i].notice_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    noticeStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchNoticeSql = "select notice_title, notice_date from notice where notice_delete != ? order by notice_id desc limit ?, ?;"
+                            let searchNoticeParam = [1, 0, rows[0].count]
+                            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let noticeStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            noticeStruct.push({
+                                                notice_title: rows[i].notice_title,
+                                                notice_date: rows[i].notice_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            noticeStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            noticeStruct
-                        })
                     }
                 }
                 conn.release()
@@ -2668,32 +3332,102 @@ app.get("/notice/search-title", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchNoticeSql = "select notice_title, notice_date\n" +
-                "from notice\n" +
-                "where match(notice_title) against(? in boolean mode) and notice_delete != ? order by notice_id desc limit ?;"
-            let searchNoticeParam = [req.query.notice_title, 1, 15]
-            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from notice" +
+                " where match(notice_title) against(? in boolean mode) and notice_delete != ?;"
+            let getCountParam = [req.query.notice_title, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let noticeStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            noticeStruct.push({
-                                notice_title: rows[i].notice_title,
-                                notice_date: rows[i].notice_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchNoticeSql = "select notice_title, notice_date\n" +
+                                        "from notice\n" +
+                                        "where match(notice_title) against(? in boolean mode) and notice_delete != ? order by notice_id desc limit ?, ?;"
+                                    let searchNoticeParam = [req.query.notice_title, 1, start, pageSize]
+                                    conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let noticeStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    noticeStruct.push({
+                                                        notice_title: rows[i].notice_title,
+                                                        notice_date: rows[i].notice_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    noticeStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchNoticeSql = "select notice_title, notice_date\n" +
+                                "from notice\n" +
+                                "where match(notice_title) against(? in boolean mode) and notice_delete != ? order by notice_id desc limit ?, ?;"
+                            let searchNoticeParam = [req.query.notice_title, 1, 0, rows[0].count]
+                            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let noticeStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            noticeStruct.push({
+                                                notice_title: rows[i].notice_title,
+                                                notice_date: rows[i].notice_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            noticeStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            noticeStruct
-                        })
                     }
                 }
                 conn.release()
@@ -2710,30 +3444,96 @@ app.get("/contact/list", (req, res) => {
         })
     else {
         getConnection((conn) => {
-            let searchContactSql = "select contact_title, contact_log.contact_send from contact join contact_log where contact.contact_id = contact_log.contact_id order by contact.contact_id desc limit ?;"
-            let searchContactParam = [15]
-            conn.query(searchContactSql, searchContactParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from contact;"
+            conn.query(getCountSql, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0)
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
-                    else {
-                        let contactStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            contactStruct.push({
-                                contact_title: rows[i].contact_title,
-                                contact_date: rows[i].notice_date
+                    } else {
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchContactSql = "select contact_title, contact_log.contact_send from contact join contact_log where contact.contact_id = contact_log.contact_id order by contact.contact_id desc limit ?, ?;"
+                                    let searchContactParam = [start, pageSize]
+                                    conn.query(searchContactSql, searchContactParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0)
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            else {
+                                                let contactStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    contactStruct.push({
+                                                        contact_title: rows[i].contact_title,
+                                                        contact_date: rows[i].notice_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    contactStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchContactSql = "select contact_title, contact_log.contact_send from contact join contact_log where contact.contact_id = contact_log.contact_id order by contact.contact_id desc limit ?, ?;"
+                            let searchContactParam = [0, rows[0].count]
+                            conn.query(searchContactSql, searchContactParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    else {
+                                        let contactStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            contactStruct.push({
+                                                contact_title: rows[i].contact_title,
+                                                contact_date: rows[i].notice_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            contactStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            contactStruct
-                        })
                     }
                 }
                 conn.release()
@@ -2974,45 +3774,127 @@ app.post("/point/use-history", (req, res) => {
                                         else {
                                             let memberEmail = rows[0].member_email
                                             let memberName = rows[0].member_name
-                                            let searchPointSql = "select use_contents, point, use_date, accept_flag, use_code from point where member_email = ?;"
-                                            let searchPointParam = [req.body.member_email]
-                                            conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                                            let getCountSql = "select count(*) as count from point where member_email = ?;"
+                                            let getCountParam = [memberEmail]
+                                            conn.query(getCountSql, getCountParam, function (error, rows) {
                                                 if (error) {
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
                                                     })
                                                 } else {
-                                                    if (rows.length === 0)
+                                                    if (rows.length === 0 || rows[0].count === 0) {
                                                         res.status(404).json({
                                                             content: false
                                                         })
-                                                    else {
-                                                        let pointInfoStruct = []
-                                                        for (let i = 0; i < rows.length; i++) {
-                                                            if (rows[i].accept_flag === null) {
-                                                                pointInfoStruct.push({
-                                                                    member_email: memberEmail,
-                                                                    member_name: memberName,
-                                                                    use_contents: rows[i].use_contents,
-                                                                    point: rows[i].point,
-                                                                    use_date: rows[i].use_date,
+                                                    } else {
+                                                        let pageSize = 15
+                                                        if (rows[0].count > pageSize) {
+                                                            if (req.body.page === undefined || req.body.page === "")
+                                                                res.status(401).json({
+                                                                    content: "empty page number"
                                                                 })
-                                                            } else {
-                                                                pointInfoStruct.push({
-                                                                    member_email: memberEmail,
-                                                                    member_name: memberName,
-                                                                    use_contents: rows[i].use_contents,
-                                                                    point: rows[i].point,
-                                                                    use_date: rows[i].use_date,
-                                                                    accept_flag: rows[i].accept_flag,
-                                                                    use_code: rows[i].use_code
-                                                                })
+                                                            else {
+                                                                let page = req.body.page
+                                                                let start = 0
+                                                                if (page <= 0)
+                                                                    page = 1
+                                                                else
+                                                                    start = (page - 1) * pageSize
+                                                                const totalPageCount = rows[0].count
+                                                                if (page > Math.ceil(totalPageCount / pageSize))
+                                                                    res.status(404).json({
+                                                                        content: "over page"
+                                                                    })
+                                                                else {
+                                                                    let searchPointSql = "select use_contents, point, use_date, accept_flag, use_code from point where member_email = ? limit ?, ?;"
+                                                                    let searchPointParam = [req.body.member_email, start, pageSize]
+                                                                    conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                                                                        if (error) {
+                                                                            console.error(error)
+                                                                            res.status(500).json({
+                                                                                content: "DB Error"
+                                                                            })
+                                                                        } else {
+                                                                            if (rows.length === 0)
+                                                                                res.status(404).json({
+                                                                                    content: false
+                                                                                })
+                                                                            else {
+                                                                                let pointInfoStruct = []
+                                                                                for (let i = 0; i < rows.length; i++) {
+                                                                                    if (rows[i].accept_flag === null) {
+                                                                                        pointInfoStruct.push({
+                                                                                            member_email: memberEmail,
+                                                                                            member_name: memberName,
+                                                                                            use_contents: rows[i].use_contents,
+                                                                                            point: rows[i].point,
+                                                                                            use_date: rows[i].use_date,
+                                                                                        })
+                                                                                    } else {
+                                                                                        pointInfoStruct.push({
+                                                                                            member_email: memberEmail,
+                                                                                            member_name: memberName,
+                                                                                            use_contents: rows[i].use_contents,
+                                                                                            point: rows[i].point,
+                                                                                            use_date: rows[i].use_date,
+                                                                                            accept_flag: rows[i].accept_flag,
+                                                                                            use_code: rows[i].use_code
+                                                                                        })
+                                                                                    }
+                                                                                }
+                                                                                res.status(200).json({
+                                                                                    pointInfoStruct
+                                                                                })
+                                                                            }
+                                                                        }
+                                                                    })
+                                                                }
                                                             }
+                                                        } else {
+                                                            let searchPointSql = "select use_contents, point, use_date, accept_flag, use_code from point where member_email = ? limit ?, ?;"
+                                                            let searchPointParam = [req.body.member_email, 0, rows[0].count]
+                                                            conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                                                                if (error) {
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else {
+                                                                    if (rows.length === 0)
+                                                                        res.status(404).json({
+                                                                            content: false
+                                                                        })
+                                                                    else {
+                                                                        let pointInfoStruct = []
+                                                                        for (let i = 0; i < rows.length; i++) {
+                                                                            if (rows[i].accept_flag === null) {
+                                                                                pointInfoStruct.push({
+                                                                                    member_email: memberEmail,
+                                                                                    member_name: memberName,
+                                                                                    use_contents: rows[i].use_contents,
+                                                                                    point: rows[i].point,
+                                                                                    use_date: rows[i].use_date,
+                                                                                })
+                                                                            } else {
+                                                                                pointInfoStruct.push({
+                                                                                    member_email: memberEmail,
+                                                                                    member_name: memberName,
+                                                                                    use_contents: rows[i].use_contents,
+                                                                                    point: rows[i].point,
+                                                                                    use_date: rows[i].use_date,
+                                                                                    accept_flag: rows[i].accept_flag,
+                                                                                    use_code: rows[i].use_code
+                                                                                })
+                                                                            }
+                                                                        }
+                                                                        res.status(200).json({
+                                                                            pointInfoStruct
+                                                                        })
+                                                                    }
+                                                                }
+                                                            })
                                                         }
-                                                        res.status(200).json({
-                                                            pointInfoStruct
-                                                        })
                                                     }
                                                 }
                                             })
@@ -3077,43 +3959,123 @@ app.post("/point/point-history", (req, res) => {
                                         else {
                                             let memberEmail = rows[0].member_email
                                             let memberName = rows[0].member_name
-                                            let searchIdeaPointSql = "select idea_title, add_point, date_point, idea_date from idea where member_email = ? and idea_delete != ?;"
-                                            let searchIdeaPointParam = [req.body.member_email, 1]
-                                            conn.query(searchIdeaPointSql, searchIdeaPointParam, function (error, rows) {
+                                            let getCountSql = "select count(*) as count from idea where member_email = ? and idea_delete != ?;"
+                                            let getCountParam = [memberEmail, 1]
+                                            conn.query(getCountSql, getCountParam, function (error, rows) {
                                                 if (error) {
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
                                                     })
                                                 } else {
-                                                    if (rows.length === 0)
+                                                    if (rows.length === 0 || rows[0].count === 0) {
                                                         res.status(404).json({
                                                             content: false
                                                         })
-                                                    else {
-                                                        let ideaPointStruct = []
-                                                        for (let i = 0; i < rows.length; i++) {
-                                                            if (rows[i].date_point === null) {
-                                                                ideaPointStruct.push({
-                                                                    member_email: memberEmail,
-                                                                    member_name: memberName,
-                                                                    idea_title: rows[i].idea_title,
-                                                                    add_point: rows[i].add_point,
-                                                                    date_point: rows[i].idea_date
+                                                    } else {
+                                                        let pageSize = 15
+                                                        if (rows[0].count > pageSize) {
+                                                            if (req.body.page === undefined || req.body.page === "")
+                                                                res.status(401).json({
+                                                                    content: "empty page number"
                                                                 })
-                                                            } else {
-                                                                ideaPointStruct.push({
-                                                                    member_email: memberEmail,
-                                                                    member_name: memberName,
-                                                                    idea_title: rows[i].idea_title,
-                                                                    add_point: rows[i].add_point,
-                                                                    date_point: rows[i].date_point
-                                                                })
+                                                            else {
+                                                                let page = req.body.page
+                                                                let start = 0
+                                                                if (page <= 0)
+                                                                    page = 1
+                                                                else
+                                                                    start = (page - 1) * pageSize
+                                                                const totalPageCount = rows[0].count
+                                                                if (page > Math.ceil(totalPageCount / pageSize))
+                                                                    res.status(404).json({
+                                                                        content: "over page"
+                                                                    })
+                                                                else {
+                                                                    let searchIdeaPointSql = "select idea_title, add_point, date_point, idea_date from idea where member_email = ? and idea_delete != ? limit ?, ?;"
+                                                                    let searchIdeaPointParam = [req.body.member_email, 1, start, pageSize]
+                                                                    conn.query(searchIdeaPointSql, searchIdeaPointParam, function (error, rows) {
+                                                                        if (error) {
+                                                                            console.error(error)
+                                                                            res.status(500).json({
+                                                                                content: "DB Error"
+                                                                            })
+                                                                        } else {
+                                                                            if (rows.length === 0)
+                                                                                res.status(404).json({
+                                                                                    content: false
+                                                                                })
+                                                                            else {
+                                                                                let ideaPointStruct = []
+                                                                                for (let i = 0; i < rows.length; i++) {
+                                                                                    if (rows[i].date_point === null) {
+                                                                                        ideaPointStruct.push({
+                                                                                            member_email: memberEmail,
+                                                                                            member_name: memberName,
+                                                                                            idea_title: rows[i].idea_title,
+                                                                                            add_point: rows[i].add_point,
+                                                                                            date_point: rows[i].idea_date
+                                                                                        })
+                                                                                    } else {
+                                                                                        ideaPointStruct.push({
+                                                                                            member_email: memberEmail,
+                                                                                            member_name: memberName,
+                                                                                            idea_title: rows[i].idea_title,
+                                                                                            add_point: rows[i].add_point,
+                                                                                            date_point: rows[i].date_point
+                                                                                        })
+                                                                                    }
+                                                                                }
+                                                                                res.status(200).json({
+                                                                                    ideaPointStruct
+                                                                                })
+                                                                            }
+                                                                        }
+                                                                    })
+                                                                }
                                                             }
+                                                        } else {
+                                                            let searchIdeaPointSql = "select idea_title, add_point, date_point, idea_date from idea where member_email = ? and idea_delete != ? limit ?, ?;"
+                                                            let searchIdeaPointParam = [req.body.member_email, 1, 0, rows[0].count]
+                                                            conn.query(searchIdeaPointSql, searchIdeaPointParam, function (error, rows) {
+                                                                if (error) {
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else {
+                                                                    if (rows.length === 0)
+                                                                        res.status(404).json({
+                                                                            content: false
+                                                                        })
+                                                                    else {
+                                                                        let ideaPointStruct = []
+                                                                        for (let i = 0; i < rows.length; i++) {
+                                                                            if (rows[i].date_point === null) {
+                                                                                ideaPointStruct.push({
+                                                                                    member_email: memberEmail,
+                                                                                    member_name: memberName,
+                                                                                    idea_title: rows[i].idea_title,
+                                                                                    add_point: rows[i].add_point,
+                                                                                    date_point: rows[i].idea_date
+                                                                                })
+                                                                            } else {
+                                                                                ideaPointStruct.push({
+                                                                                    member_email: memberEmail,
+                                                                                    member_name: memberName,
+                                                                                    idea_title: rows[i].idea_title,
+                                                                                    add_point: rows[i].add_point,
+                                                                                    date_point: rows[i].date_point
+                                                                                })
+                                                                            }
+                                                                        }
+                                                                        res.status(200).json({
+                                                                            ideaPointStruct
+                                                                        })
+                                                                    }
+                                                                }
+                                                            })
                                                         }
-                                                        res.status(200).json({
-                                                            ideaPointStruct
-                                                        })
                                                     }
                                                 }
                                             })

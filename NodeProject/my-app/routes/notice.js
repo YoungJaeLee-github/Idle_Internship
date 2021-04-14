@@ -23,31 +23,99 @@ app.use(sessionConfig.init())
 // 1. 공지사항 조회(사용자)
 app.get("/list", (req, res) => {
     getConnection((conn) => {
-        let searchNoticeSql = "select notice_title, notice_date from notice where notice_delete != ? order by notice_id desc limit ?;"
-        let searchNoticeParam = [1, 15]
-        conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+        let getCountSql = "select count(*) as count from notice where notice_delete != ?;"
+        let getCountParam = [1]
+        conn.query(getCountSql, getCountParam, function (error, rows) {
             if (error) {
                 console.error(error)
                 res.status(500).json({
                     content: "DB Error"
                 })
             } else {
-                if (rows.length === 0) {
-                    res.status(401).json({
+                if (rows.length === 0 || rows[0].count === 0) {
+                    res.status(404).json({
                         content: false
                     })
                 } else {
-                    let noticeStruct = []
-                    for (let i = 0; i < rows.length; i++) {
-                        noticeStruct.push({
-                            notice_id: "공지",
-                            notice_title: rows[i].notice_title,
-                            notice_date: rows[i].notice_date
+                    let pageSize = 15
+                    if (rows[0].count > pageSize) {
+                        if (req.query.page === undefined || req.query.page === "")
+                            res.status(401).json({
+                                content: "empty page number"
+                            })
+                        else {
+                            let page = req.query.page
+                            let start = 0
+                            if (page <= 0)
+                                page = 1
+                            else
+                                start = (page - 1) * pageSize
+                            const totalPageCount = rows[0].count
+                            if (page > Math.ceil(totalPageCount / pageSize))
+                                res.status(404).json({
+                                    content: "over page"
+                                })
+                            else {
+                                let searchNoticeSql = "select notice_title, notice_date from notice where notice_delete != ? order by notice_id desc limit ?, ?;"
+                                let searchNoticeParam = [1, start, pageSize]
+                                conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                                    if (error) {
+                                        console.error(error)
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
+                                    } else {
+                                        if (rows.length === 0) {
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        } else {
+                                            let noticeStruct = []
+                                            for (let i = 0; i < rows.length; i++) {
+                                                noticeStruct.push({
+                                                    notice_id: "공지",
+                                                    notice_title: rows[i].notice_title,
+                                                    notice_date: rows[i].notice_date
+                                                })
+                                            }
+                                            res.status(200).json({
+                                                noticeStruct
+                                            })
+                                        }
+                                    }
+                                })
+                            }
+                        }
+                    } else {
+                        let searchNoticeSql = "select notice_title, notice_date from notice where notice_delete != ? order by notice_id desc limit ?, ?;"
+                        let searchNoticeParam = [1, 0, rows[0].count]
+                        conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                            if (error) {
+                                console.error(error)
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
+                            } else {
+                                if (rows.length === 0) {
+                                    res.status(401).json({
+                                        content: false
+                                    })
+                                } else {
+                                    let noticeStruct = []
+                                    for (let i = 0; i < rows.length; i++) {
+                                        noticeStruct.push({
+                                            notice_id: "공지",
+                                            notice_title: rows[i].notice_title,
+                                            notice_date: rows[i].notice_date
+                                        })
+                                    }
+                                    res.status(200).json({
+                                        noticeStruct
+                                    })
+                                }
+                            }
                         })
                     }
-                    res.status(200).json({
-                        noticeStruct
-                    })
                 }
             }
             conn.release()
@@ -163,36 +231,110 @@ app.get("/search-title", (req, res) => {
         })
     } else {
         getConnection((conn) => {
-            let searchNoticeSql = "select notice_title, notice_date\n" +
-                "from notice\n" +
-                "where match(notice_title) against(? in boolean mode)\n" +
-                "  and notice_delete != ?\n" +
-                "order by notice_id desc\n" +
-                "limit ?;"
-            let searchNoticeParam = [req.query.notice_title, 1, 15]
-            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from notice" +
+                " where match(notice_title) against(? in boolean mode) and notice_delete != ?;"
+            let getCountParam = [req.query.notice_title, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let noticeStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            noticeStruct.push({
-                                notice_id: "공지",
-                                notice_title: rows[i].notice_title,
-                                notice_date: rows[i].notice_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
+                                })
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
+                                    })
+                                else {
+                                    let searchNoticeSql = "select notice_title, notice_date\n" +
+                                        "from notice\n" +
+                                        "where match(notice_title) against(? in boolean mode)\n" +
+                                        "  and notice_delete != ?\n" +
+                                        "order by notice_id desc\n" +
+                                        "limit ?, ?;"
+                                    let searchNoticeParam = [req.query.notice_title, 1, start, pageSize]
+                                    conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let noticeStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    noticeStruct.push({
+                                                        notice_id: "공지",
+                                                        notice_title: rows[i].notice_title,
+                                                        notice_date: rows[i].notice_date
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    noticeStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        } else {
+                            let searchNoticeSql = "select notice_title, notice_date\n" +
+                                "from notice\n" +
+                                "where match(notice_title) against(? in boolean mode)\n" +
+                                "  and notice_delete != ?\n" +
+                                "order by notice_id desc\n" +
+                                "limit ?, ?;"
+                            let searchNoticeParam = [req.query.notice_title, 1, 0, rows[0].count]
+                            conn.query(searchNoticeSql, searchNoticeParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let noticeStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            noticeStruct.push({
+                                                notice_id: "공지",
+                                                notice_title: rows[i].notice_title,
+                                                notice_date: rows[i].notice_date
+                                            })
+                                        }
+                                        res.status(200).json({
+                                            noticeStruct
+                                        })
+                                    }
+                                }
                             })
                         }
-                        res.status(200).json({
-                            noticeStruct
-                        })
                     }
                 }
                 conn.release()

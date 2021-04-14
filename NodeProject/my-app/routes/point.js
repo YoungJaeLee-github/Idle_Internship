@@ -109,31 +109,99 @@ app.get("/use-history", (req, res) => {
                                 content: false
                             })
                         else {
-                            let searchPointSql = "select use_contents, point, use_date from point where member_email = ?;"
-                            let searchPointParam = [req.session.member_email]
-                            conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                            let getCountSql = "select count(*) as count from point where member_email = ?;"
+                            let getCountParam = [req.session.member_email]
+                            conn.query(getCountSql, getCountParam, function (error, rows) {
                                 if (error) {
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
                                     })
                                 } else {
-                                    if (rows.length === 0)
+                                    if (rows.length === 0 || rows[0].count === 0) {
                                         res.status(404).json({
                                             content: false
                                         })
-                                    else {
-                                        let pointInfoStruct = []
-                                        for (let i = 0; i < rows.length; i++) {
-                                            pointInfoStruct.push({
-                                                use_contents: rows[i].use_contents,
-                                                point: rows[i].point,
-                                                use_date: rows[i].use_date
+                                    } else {
+                                        let pageSize = 15
+                                        if (rows[0].count > pageSize) {
+                                            if (req.query.page === undefined || req.query.page === "")
+                                                res.status(401).json({
+                                                    content: "empty page number"
+                                                })
+                                            else {
+                                                let page = req.query.page
+                                                let start = 0
+                                                if (page <= 0)
+                                                    page = 1
+                                                else
+                                                    start = (page - 1) * pageSize
+                                                const totalPageCount = rows[0].count
+                                                if (page > Math.ceil(totalPageCount / pageSize))
+                                                    res.status(404).json({
+                                                        content: "over page"
+                                                    })
+                                                else {
+                                                    let searchPointSql = "select use_contents, point, use_date from point where member_email = ? limit ?, ?;"
+                                                    let searchPointParam = [req.session.member_email, start, pageSize]
+                                                    conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                                                        if (error) {
+                                                            console.error(error)
+                                                            res.status(500).json({
+                                                                content: "DB Error"
+                                                            })
+                                                        } else {
+                                                            if (rows.length === 0)
+                                                                res.status(404).json({
+                                                                    content: false
+                                                                })
+                                                            else {
+                                                                let pointInfoStruct = []
+                                                                for (let i = 0; i < rows.length; i++) {
+                                                                    pointInfoStruct.push({
+                                                                        use_contents: rows[i].use_contents,
+                                                                        point: rows[i].point,
+                                                                        use_date: rows[i].use_date
+                                                                    })
+                                                                }
+                                                                res.status(200).json({
+                                                                    pointInfoStruct
+                                                                })
+                                                            }
+                                                        }
+                                                    })
+                                                }
+                                            }
+                                        } else {
+                                            let searchPointSql = "select use_contents, point, use_date from point where member_email = ? limit ?, ?;"
+                                            let searchPointParam = [req.session.member_email, 0, rows[0].count]
+                                            conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0)
+                                                        res.status(404).json({
+                                                            content: false
+                                                        })
+                                                    else {
+                                                        let pointInfoStruct = []
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            pointInfoStruct.push({
+                                                                use_contents: rows[i].use_contents,
+                                                                point: rows[i].point,
+                                                                use_date: rows[i].use_date
+                                                            })
+                                                        }
+                                                        res.status(200).json({
+                                                            pointInfoStruct
+                                                        })
+                                                    }
+                                                }
                                             })
                                         }
-                                        res.status(200).json({
-                                            pointInfoStruct
-                                        })
                                     }
                                 }
                             })
@@ -173,39 +241,115 @@ app.get("/point-history", (req, res) => {
                                 content: false
                             })
                         else {
-                            let searchIdeaPointSql = "select idea_title, add_point, date_point, idea_date from idea where member_email = ? and idea_delete != ?;"
-                            let searchIdeaPointParam = [req.session.member_email, 1]
-                            conn.query(searchIdeaPointSql, searchIdeaPointParam, function (error, rows) {
+                            let getCountSql = "select count(*) as count from idea where member_email = ? and idea_delete != ?;"
+                            let getCountParam = [req.session.member_email, 1]
+                            conn.query(getCountSql, getCountParam, function (error, rows) {
                                 if (error) {
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
                                     })
                                 } else {
-                                    if (rows.length === 0)
+                                    if (rows.length === 0 || rows[0].count === 0) {
                                         res.status(404).json({
                                             content: false
                                         })
-                                    else {
-                                        let ideaPointStruct = []
-                                        for (let i = 0; i < rows.length; i++) {
-                                            if (rows[i].date_point === null) {
-                                                ideaPointStruct.push({
-                                                    idea_title: rows[i].idea_title,
-                                                    add_point: rows[i].add_point,
-                                                    date_point: rows[i].idea_date
+                                    } else {
+                                        let pageSize = 15
+                                        if (rows[0].count > pageSize) {
+                                            if (req.query.page === undefined || req.query.page === "")
+                                                res.status(401).json({
+                                                    content: "empty page number"
                                                 })
-                                            } else {
-                                                ideaPointStruct.push({
-                                                    idea_title: rows[i].idea_title,
-                                                    add_point: rows[i].add_point,
-                                                    date_point: rows[i].date_point
-                                                })
+                                            else {
+                                                let page = req.query.page
+                                                let start = 0
+                                                if (page <= 0)
+                                                    page = 1
+                                                else
+                                                    start = (page - 1) * pageSize
+                                                const totalPageCount = rows[0].count
+                                                if (page > Math.ceil(totalPageCount / pageSize))
+                                                    res.status(404).json({
+                                                        content: "over page"
+                                                    })
+                                                else {
+                                                    let searchIdeaPointSql = "select idea_title, add_point, date_point, idea_date from idea where member_email = ? and idea_delete != ? limit ?, ?;"
+                                                    let searchIdeaPointParam = [req.session.member_email, 1, start, pageSize]
+                                                    conn.query(searchIdeaPointSql, searchIdeaPointParam, function (error, rows) {
+                                                        if (error) {
+                                                            console.error(error)
+                                                            res.status(500).json({
+                                                                content: "DB Error"
+                                                            })
+                                                        } else {
+                                                            if (rows.length === 0)
+                                                                res.status(404).json({
+                                                                    content: false
+                                                                })
+                                                            else {
+                                                                let ideaPointStruct = []
+                                                                for (let i = 0; i < rows.length; i++) {
+                                                                    if (rows[i].date_point === null) {
+                                                                        ideaPointStruct.push({
+                                                                            idea_title: rows[i].idea_title,
+                                                                            add_point: rows[i].add_point,
+                                                                            date_point: rows[i].idea_date
+                                                                        })
+                                                                    } else {
+                                                                        ideaPointStruct.push({
+                                                                            idea_title: rows[i].idea_title,
+                                                                            add_point: rows[i].add_point,
+                                                                            date_point: rows[i].date_point
+                                                                        })
+                                                                    }
+                                                                }
+                                                                res.status(200).json({
+                                                                    ideaPointStruct
+                                                                })
+                                                            }
+                                                        }
+                                                    })
+                                                }
                                             }
+                                        } else {
+                                            let searchIdeaPointSql = "select idea_title, add_point, date_point, idea_date from idea where member_email = ? and idea_delete != ? limit ?, ?;"
+                                            let searchIdeaPointParam = [req.session.member_email, 1, 0, rows[0].count]
+                                            conn.query(searchIdeaPointSql, searchIdeaPointParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0)
+                                                        res.status(404).json({
+                                                            content: false
+                                                        })
+                                                    else {
+                                                        let ideaPointStruct = []
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            if (rows[i].date_point === null) {
+                                                                ideaPointStruct.push({
+                                                                    idea_title: rows[i].idea_title,
+                                                                    add_point: rows[i].add_point,
+                                                                    date_point: rows[i].idea_date
+                                                                })
+                                                            } else {
+                                                                ideaPointStruct.push({
+                                                                    idea_title: rows[i].idea_title,
+                                                                    add_point: rows[i].add_point,
+                                                                    date_point: rows[i].date_point
+                                                                })
+                                                            }
+                                                        }
+                                                        res.status(200).json({
+                                                            ideaPointStruct
+                                                        })
+                                                    }
+                                                }
+                                            })
                                         }
-                                        res.status(200).json({
-                                            ideaPointStruct
-                                        })
                                     }
                                 }
                             })

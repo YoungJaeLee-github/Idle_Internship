@@ -222,7 +222,8 @@
 * URL : http://{IP}:{PORT}/member/myidea
 * Method : GET
 * URL Params
-    1. Key : idea_title, Value : 입력한 idea_title
+    1. Key : idea_title, Value : 입력한 idea_title어
+    2. Key : page, Value : 페이지 번호
 * Description : 현재 세션의 member_email에 해당하는 아이디어 조회 후 해당 idea 조회
 * Success Response
     1. Code : 200
@@ -234,6 +235,8 @@
 ## 관심 사업 조회
 * URL : http://{IP}:{PORT}/member/marked
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 현재 세션의 사용자 이메일 조회 후 해당 사용자가 즐겨찾기한 공고를 조회 함
 * Success Response
     1. Code : 200
@@ -489,6 +492,8 @@
 ## 아이디어 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/idea/list
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 관리자는 아이디어 제목 전체를 15개씩 볼 수 있으며, 참여자 포인트 순위도 10위 까지 볼 수 있음, 삭제여부 확인.
 * Success Response
     1. Code : 200
@@ -529,6 +534,7 @@
 * Method : GET
 * URL Params
     1. Key : idea_title, Value : 검색할 아이디어 제목
+    2. Key : page, Value : 페이지 번호
 * Description : 입력된 제목이 포함된 아이디어 목록을 조회
 * Success Response
     1. Code : 200
@@ -540,6 +546,8 @@
 ## 문의글 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/cs/list
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 문의글 목록 조회, 15개씩 볼 수 있음
 * Success Response
     1. Code : 200
@@ -593,6 +601,7 @@
 * Method : GET
 * URL Params
     1. Key : cs_title, Value : 검색할 문의글 제목
+    2. Key : page, Value : 페이지 번호
 * Description : 입력 받은 문자가 포함된 문의글 목록 조회
 * Success Response
     1. Code : 200
@@ -604,6 +613,8 @@
 ## 공고정보 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/anno/list
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 공고정보를 15개씩 조회할 수 있음
 * Success Response
     1. Code : 200
@@ -629,7 +640,8 @@
 * URL : http://{IP}:{PORT}/admin/anno/search-title
 * Method : GET
 * URL Params
-    1. Key : anno_title, Value : 검색할 공고 제목
+    1. Key : anno_title, Value : 검색할 공고 제목색
+    2. Key : page, Value : 페이지 번호
 * Description : 입력한 공고 제목이 포함된 공고 리스트를 조회
 * Success Response
     1. Code : 200
@@ -641,6 +653,8 @@
 ## 공지사항 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/notice/list
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 공지사항 목록 15개씩 조회, 삭제 여부 검사
 * Success Response
   1. Code : 200
@@ -679,7 +693,9 @@
 ## 공지사항 검색(관리자)
 * URL : http://{IP}:{PORT}/admin/notice/search-title
 * Method : GET
-  1. Key : notice_title, Value : 검색할 공지사항 제목
+* URL Params
+    1. Key : page, Value : 페이지 번호
+    2. Key : notice_title, Value : 검색할 공지사항 제목
 * Description : 입력된 공지사항 제목이 포함된 공지사항 목록을 조회
 * Success Response
   1. Code : 200
@@ -692,6 +708,7 @@
 * URL : http://{IP}:{PORT}/admin/contact/list
 * Method : GET
 * URL Params
+  1. Key : page, Value : 페이지 번호
 * Description : 문의글 번호 조회 후 해당 문의글 리스트 조회
 * Success Response
     1. Code : 200
@@ -748,6 +765,8 @@
 ## 문의글 조회(사용자)
 * URL : http://{IP}:{PORT}/cs/list
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 문의글 목록 조회, 15개씩 볼 수 있음
 * Success Response
     1. Code : 200
@@ -817,7 +836,8 @@
 * URL : http://{IP}:{PORT}/cs/search-title
 * Method : GET
 * URL Params
-    1. Key : cs_title, Value : 검색할 문의글 제목
+    1. Key : cs_title, Value : 검색할 문의글 제목색
+    2. Key : page, Value : 페이지 번호
 * Description : 입력 받은 문자가 포함된 문의글 목록 조회
 * Success Response
     1. Code : 200
@@ -830,6 +850,8 @@
 ## 공지사항 조회(사용자)
 * URL : http://{IP}:{PORT}/notice/list
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 공지사항 목록 15개씩 조회, 삭제 여부 검사
 * Success Response
     1. Code : 200
@@ -869,6 +891,7 @@
 * URL : http://{IP}:{PORT}/notice/search-title
 * Method : GET
     1. Key : notice_title, Value : 검색할 공지사항 제목
+    2. Key : page, Value : 페이지 번호
 * Description : 입력된 공지사항 제목이 포함된 공지사항 목록을 조회
 * Success Response
     1. Code : 200
@@ -940,6 +963,7 @@
 * URL : http://{IP}:{PORT}/idea/list
 * Method : GET
 * URL Params
+  1. Key : page, Value : 페이지 번호
 * Description : 사용자는 아이디어 제목 일부만 보여야 하며 15개씩 볼 수 있음, 참여자 포인트 순위도 10위 까지 볼 수 있음
 * Success Response
     1. Code : 200
@@ -979,7 +1003,8 @@
 * URL : http://{IP}:{PORT}/idea/search-title
 * Method : GET
 * URL Params
-    1. Key : idea_title, Value : 검색할 아이디어 제목
+    1. Key : idea_title, Value : 검색할 아이디어 제목어
+    2. Key : page, Value : 페이지 번호
 * Description : 입력된 제목이 포함된 아이디어 목록을 조회
 * Success Response
     1. Code : 200
@@ -992,6 +1017,8 @@
 ## 공고정보 조회(사용자)
 * URL : http://{IP}:{PORT}/announcement/list
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 공고정보를 15개씩 조회할 수 있음
 * Success Response
     1. Code : 200
@@ -1017,7 +1044,8 @@
 * URL : http://{IP}:{PORT}/announcement/search-title
 * Method : GET
 * URL Params
-    1. Key : anno_title, Value : 검색할 공고 제목
+    1. Key : anno_title, Value : 검색할 공고 제목색
+    2. Key : page, Value : 페이지 번호
 * Description : 입력한 공고 제목이 포함된 공고 리스트를 조회
 * Success Response
     1. Code : 200
@@ -1081,6 +1109,8 @@
 ## 포인트 사용내역 조회(사용자)
 * URL : http://{IP}:{PORT}/point/use-history
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 현재 세션 이메일에 해당하는 사용자의 포인트 사용내역 조회
 * Success Response
     1. Code : 200
@@ -1089,11 +1119,12 @@
     1. Code : 401
     2. Content : false
 
-## 포인트 사용 내역 조회(관리자)
+## 포인트 사용내역 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/point/use-history
 * Method : POST
 * URL Params
   1. Key : member_email, Value : 조회할 사용자 이메일
+  2. Key : page, Value : 페이지 번호
 * Description : 현재 사용 가능한 포인트, point 테이블 내역 조회
 * Success Response
   1. Code : 200
@@ -1105,6 +1136,8 @@
 ## 포인트 적립내역 조회(사용자)
 * URL : http://{IP}:{PORT}/point/point-history
 * Method : GET
+* URL Params
+    1. Key : page, Value : 페이지 번호
 * Description : 현재 세션 사용자의 아이디어 제목(적립 내역), 얻은 포인트, 적립 날짜 조회
 * Success Response
     1. Code : 200
@@ -1116,8 +1149,9 @@
 ## 포인트 적립내역 조회(관리자)
 * URL : http://{IP}:{PORT}/admin/point/point-history
 * Method : POST
-  * URL Params
-  1. Key : member_email, Value : 조회할 사용자 이메일
+* URL Params
+    1. Key : member_email, Value : 조회할 사용자 이메일리
+    2. Key : page, Value : 페이지 번호
 * Description : 입력된 사용자 이메일의 아이디어 제목(적립 내역), 얻은 포인트, 적립 날짜 조회
 * Success Response
   1. Code : 200

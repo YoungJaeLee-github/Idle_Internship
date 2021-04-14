@@ -460,70 +460,177 @@ app.patch("/edit", upload.any(), (req, res) => {
 // 3. 아이디어 조회(사용자)
 app.get("/list", (req, res) => {
     getConnection((conn) => {
-        let searchSql = "select idea_title, idea_date, idea.member_email\n" +
-            "from idea\n" +
-            "         join member m on idea.member_email = m.member_email\n" +
-            "where idea_delete != ?\n" +
-            "  and member_ban != ?\n" +
-            "  and member_secede != ?\n" +
-            "order by idea_date desc\n" +
-            "limit ?;"
-        let searchParam = [1, 1, 1, 15]
-        conn.query(searchSql, searchParam, function (error, rows) {
+        let getCountSql = "select count(*) as count from idea join member on idea.member_email = member.member_email where member_secede != ? and member_ban != ? and idea_delete != ?;"
+        let getCountParam = [1, 1, 1]
+        conn.query(getCountSql, getCountParam, function (error, rows) {
             if (error) {
                 console.error(error)
                 res.status(500).json({
                     content: "DB Error"
                 })
             } else {
-                if (rows.length === 0) {
-                    res.status(401).json({
+                if (rows.length === 0 || rows[0].count === 0) {
+                    res.status(404).json({
                         content: false
                     })
                 } else {
-                    let ideaStruct = []
-                    for (let i = 0; i < rows.length; i++) {
-                        if (rows[i].member_email === req.session.member_email) {
-                            ideaStruct.push({
-                                idea_title: rows[i].idea_title,
-                                idea_date: rows[i].idea_date
+                    let pageSize = 15
+                    if (rows[0].count > pageSize) {
+                        if (req.query.page === undefined || req.query.page === "")
+                            res.status(401).json({
+                                content: "empty page number"
                             })
-                        } else {
-                            ideaStruct.push({
-                                idea_title: func.masking(rows[i].idea_title),
-                                idea_date: rows[i].idea_date
-                            })
-                        }
-                    }
-                    let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
-                    let searchRankParam = [1, 1, 10]
-                    conn.query(searchRankSql, searchRankParam, function (error, rows) {
-                        if (error) {
-                            console.error(error)
-                            res.status(500).json({
-                                content: "DB Error"
-                            })
-                        } else {
-                            if (rows.length === 0) {
-                                res.status(401).json({
-                                    content: false
+                        else {
+                            let page = req.query.page
+                            let start = 0
+                            if (page <= 0)
+                                page = 1
+                            else
+                                start = (page - 1) * pageSize
+                            const totalPageCount = rows[0].count
+                            if (page > Math.ceil(totalPageCount / pageSize))
+                                res.status(404).json({
+                                    content: "over page"
                                 })
-                            } else {
-                                let rankStruct = []
-                                for (let i = 0; i < rows.length; i++) {
-                                    rankStruct.push({
-                                        member_rank: rows[i].member_rank,
-                                        member_name: rows[i].member_name,
-                                        save_point: rows[i].save_point
-                                    })
-                                }
-                                res.status(200).json({
-                                    ideaStruct,
-                                    rankStruct
+                            else {
+                                let searchSql = "select idea_title, idea_date, idea.member_email\n" +
+                                    "from idea\n" +
+                                    "         join member m on idea.member_email = m.member_email\n" +
+                                    "where idea_delete != ?\n" +
+                                    "  and member_ban != ?\n" +
+                                    "  and member_secede != ?\n" +
+                                    "order by idea_date desc\n" +
+                                    "limit ?, ?;"
+                                let searchParam = [1, 1, 1, start, pageSize]
+                                conn.query(searchSql, searchParam, function (error, rows) {
+                                    if (error) {
+                                        console.error(error)
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
+                                    } else {
+                                        if (rows.length === 0) {
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        } else {
+                                            let ideaStruct = []
+                                            for (let i = 0; i < rows.length; i++) {
+                                                if (rows[i].member_email === req.session.member_email) {
+                                                    ideaStruct.push({
+                                                        idea_title: rows[i].idea_title,
+                                                        idea_date: rows[i].idea_date
+                                                    })
+                                                } else {
+                                                    ideaStruct.push({
+                                                        idea_title: func.masking(rows[i].idea_title),
+                                                        idea_date: rows[i].idea_date
+                                                    })
+                                                }
+                                            }
+                                            let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
+                                            let searchRankParam = [1, 1, 10]
+                                            conn.query(searchRankSql, searchRankParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0) {
+                                                        res.status(401).json({
+                                                            content: false
+                                                        })
+                                                    } else {
+                                                        let rankStruct = []
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            rankStruct.push({
+                                                                member_rank: rows[i].member_rank,
+                                                                member_name: rows[i].member_name,
+                                                                save_point: rows[i].save_point
+                                                            })
+                                                        }
+                                                        res.status(200).json({
+                                                            ideaStruct,
+                                                            rankStruct
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        }
+                                    }
                                 })
                             }
                         }
-                    })
+                    } else {
+                        let searchSql = "select idea_title, idea_date, idea.member_email\n" +
+                            "from idea\n" +
+                            "         join member m on idea.member_email = m.member_email\n" +
+                            "where idea_delete != ?\n" +
+                            "  and member_ban != ?\n" +
+                            "  and member_secede != ?\n" +
+                            "order by idea_date desc\n" +
+                            "limit ?, ?;"
+                        let searchParam = [1, 1, 1, 0, rows[0].count]
+                        conn.query(searchSql, searchParam, function (error, rows) {
+                            if (error) {
+                                console.error(error)
+                                res.status(500).json({
+                                    content: "DB Error"
+                                })
+                            } else {
+                                if (rows.length === 0) {
+                                    res.status(401).json({
+                                        content: false
+                                    })
+                                } else {
+                                    let ideaStruct = []
+                                    for (let i = 0; i < rows.length; i++) {
+                                        if (rows[i].member_email === req.session.member_email) {
+                                            ideaStruct.push({
+                                                idea_title: rows[i].idea_title,
+                                                idea_date: rows[i].idea_date
+                                            })
+                                        } else {
+                                            ideaStruct.push({
+                                                idea_title: func.masking(rows[i].idea_title),
+                                                idea_date: rows[i].idea_date
+                                            })
+                                        }
+                                    }
+                                    let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
+                                    let searchRankParam = [1, 1, 10]
+                                    conn.query(searchRankSql, searchRankParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let rankStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    rankStruct.push({
+                                                        member_rank: rows[i].member_rank,
+                                                        member_name: rows[i].member_name,
+                                                        save_point: rows[i].save_point
+                                                    })
+                                                }
+                                                res.status(200).json({
+                                                    ideaStruct,
+                                                    rankStruct
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
                 }
             }
             conn.release()
@@ -651,72 +758,183 @@ app.get("/search-title", (req, res) => {
         })
     } else {
         getConnection((conn) => {
-            let searchIdeaSql = "select idea_title, idea_date, idea.member_email\n" +
-                "from idea\n" +
-                "         left join member on idea.member_email = member.member_email\n" +
-                "         left join admin on idea.admin_email = admin.admin_email\n" +
-                "where match(idea_title) against(? in boolean mode)\n" +
-                "  and idea_delete != ?\n" +
-                "  and member.member_secede != ?\n" +
-                "  and member.member_ban != ?\n" +
-                "order by idea_id desc\n" +
-                "limit ?;"
-            let searchIdeaParam = [req.query.idea_title, 1, 1, 1, 15]
-            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+            let getCountSql = "select count(*) as count from idea join member on idea.member_email = member.member_email\n" +
+                "where match(idea_title) against(? in boolean mode) and idea_delete != ? and member_secede != ?\n" +
+                "and member_ban != ?"
+            let getCountParam = [req.query.idea_title, 1, 1, 1]
+            conn.query(getCountSql, getCountParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
                         content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0) {
-                        res.status(401).json({
+                    if (rows.length === 0 || rows[0].count === 0) {
+                        res.status(404).json({
                             content: false
                         })
                     } else {
-                        let ideaStruct = []
-                        for (let i = 0; i < rows.length; i++) {
-                            if (rows[i].member_email === req.session.member_email) {
-                                ideaStruct.push({
-                                    idea_title: rows[i].idea_title,
-                                    idea_date: rows[i].idea_date
+                        let pageSize = 15
+                        if (rows[0].count > pageSize) {
+                            if (req.query.page === undefined || req.query.page === "")
+                                res.status(401).json({
+                                    content: "empty page number"
                                 })
-                            } else {
-                                ideaStruct.push({
-                                    idea_title: func.masking(rows[i].idea_title),
-                                    idea_date: rows[i].idea_date
-                                })
-                            }
-                        }
-                        let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
-                        let searchRankParam = [1, 1, 10]
-                        conn.query(searchRankSql, searchRankParam, function (error, rows) {
-                            if (error) {
-                                console.error(error)
-                                res.status(500).json({
-                                    content: "DB Error"
-                                })
-                            } else {
-                                if (rows.length === 0) {
-                                    res.status(401).json({
-                                        content: false
+                            else {
+                                let page = req.query.page
+                                let start = 0
+                                if (page <= 0)
+                                    page = 1
+                                else
+                                    start = (page - 1) * pageSize
+                                const totalPageCount = rows[0].count
+                                if (page > Math.ceil(totalPageCount / pageSize))
+                                    res.status(404).json({
+                                        content: "over page"
                                     })
-                                } else {
-                                    let rankStruct = []
-                                    for (let i = 0; i < rows.length; i++) {
-                                        rankStruct.push({
-                                            member_rank: rows[i].member_rank,
-                                            member_name: rows[i].member_name,
-                                            save_point: rows[i].save_point
-                                        })
-                                    }
-                                    res.status(200).json({
-                                        ideaStruct,
-                                        rankStruct
+                                else {
+                                    let searchIdeaSql = "select idea_title, idea_date, idea.member_email\n" +
+                                        "from idea\n" +
+                                        "         left join member on idea.member_email = member.member_email\n" +
+                                        "         left join admin on idea.admin_email = admin.admin_email\n" +
+                                        "where match(idea_title) against(? in boolean mode)\n" +
+                                        "  and idea_delete != ?\n" +
+                                        "  and member.member_secede != ?\n" +
+                                        "  and member.member_ban != ?\n" +
+                                        "order by idea_id desc\n" +
+                                        "limit ?, ?;"
+                                    let searchIdeaParam = [req.query.idea_title, 1, 1, 1, start, pageSize]
+                                    conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                                        if (error) {
+                                            console.error(error)
+                                            res.status(500).json({
+                                                content: "DB Error"
+                                            })
+                                        } else {
+                                            if (rows.length === 0) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let ideaStruct = []
+                                                for (let i = 0; i < rows.length; i++) {
+                                                    if (rows[i].member_email === req.session.member_email) {
+                                                        ideaStruct.push({
+                                                            idea_title: rows[i].idea_title,
+                                                            idea_date: rows[i].idea_date
+                                                        })
+                                                    } else {
+                                                        ideaStruct.push({
+                                                            idea_title: func.masking(rows[i].idea_title),
+                                                            idea_date: rows[i].idea_date
+                                                        })
+                                                    }
+                                                }
+                                                let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
+                                                let searchRankParam = [1, 1, 10]
+                                                conn.query(searchRankSql, searchRankParam, function (error, rows) {
+                                                    if (error) {
+                                                        console.error(error)
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
+                                                    } else {
+                                                        if (rows.length === 0) {
+                                                            res.status(401).json({
+                                                                content: false
+                                                            })
+                                                        } else {
+                                                            let rankStruct = []
+                                                            for (let i = 0; i < rows.length; i++) {
+                                                                rankStruct.push({
+                                                                    member_rank: rows[i].member_rank,
+                                                                    member_name: rows[i].member_name,
+                                                                    save_point: rows[i].save_point
+                                                                })
+                                                            }
+                                                            res.status(200).json({
+                                                                ideaStruct,
+                                                                rankStruct
+                                                            })
+                                                        }
+                                                    }
+                                                })
+                                            }
+                                        }
                                     })
                                 }
                             }
-                        })
+                        } else {
+                            let searchIdeaSql = "select idea_title, idea_date, idea.member_email\n" +
+                                "from idea\n" +
+                                "         left join member on idea.member_email = member.member_email\n" +
+                                "         left join admin on idea.admin_email = admin.admin_email\n" +
+                                "where match(idea_title) against(? in boolean mode)\n" +
+                                "  and idea_delete != ?\n" +
+                                "  and member.member_secede != ?\n" +
+                                "  and member.member_ban != ?\n" +
+                                "order by idea_id desc\n" +
+                                "limit ?, ?;"
+                            let searchIdeaParam = [req.query.idea_title, 1, 1, 1, 0, rows[0].count]
+                            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(401).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        let ideaStruct = []
+                                        for (let i = 0; i < rows.length; i++) {
+                                            if (rows[i].member_email === req.session.member_email) {
+                                                ideaStruct.push({
+                                                    idea_title: rows[i].idea_title,
+                                                    idea_date: rows[i].idea_date
+                                                })
+                                            } else {
+                                                ideaStruct.push({
+                                                    idea_title: func.masking(rows[i].idea_title),
+                                                    idea_date: rows[i].idea_date
+                                                })
+                                            }
+                                        }
+                                        let searchRankSql = "select member_rank, member_name, save_point from member where member_ban != ? and member_secede != ? and member_rank is not null order by member_rank asc limit ?;"
+                                        let searchRankParam = [1, 1, 10]
+                                        conn.query(searchRankSql, searchRankParam, function (error, rows) {
+                                            if (error) {
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                if (rows.length === 0) {
+                                                    res.status(401).json({
+                                                        content: false
+                                                    })
+                                                } else {
+                                                    let rankStruct = []
+                                                    for (let i = 0; i < rows.length; i++) {
+                                                        rankStruct.push({
+                                                            member_rank: rows[i].member_rank,
+                                                            member_name: rows[i].member_name,
+                                                            save_point: rows[i].save_point
+                                                        })
+                                                    }
+                                                    res.status(200).json({
+                                                        ideaStruct,
+                                                        rankStruct
+                                                    })
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                            })
+                        }
                     }
                 }
                 conn.release()
