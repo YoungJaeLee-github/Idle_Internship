@@ -778,8 +778,8 @@ app.get("/myidea", (req, res) => {
     if (sessionEmail === undefined)
         res.status(401).send(false)
     else {
-        let ideaSql = "select idea_title, idea_date from idea where member_email = ?"
-        let ideaParam = [sessionEmail]
+        let ideaSql = "select idea_title, idea_date from idea where member_email = ? order by idea_date desc limit ?;"
+        let ideaParam = [sessionEmail, 15]
         getConnection((conn) => {
             conn.query(ideaSql, ideaParam, function (error, rows, fields) {
                 if (error) {
@@ -803,8 +803,9 @@ app.get("/marked", (req, res) => {
     if (sessionEmail === undefined)
         res.status(401).send(false)
     else {
-        let markedSql = "select anno_title, anno_date from inter_anno as ia join anno as a on ia.anno_id = a.anno_id where member_email = ?;"
-        let markedParam = [sessionEmail]
+        let markedSql = "select anno_title, anno_date from inter_anno as ia join anno as a on ia.anno_id = a.anno_id where member_email = ?" +
+            "order by anno_date desc limit ?;"
+        let markedParam = [sessionEmail, 15]
         getConnection((conn) => {
             conn.query(markedSql, markedParam, function (error, rows, fields) {
                 if (error) {

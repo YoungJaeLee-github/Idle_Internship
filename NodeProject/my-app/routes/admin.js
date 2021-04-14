@@ -272,30 +272,34 @@ cron.schedule("01 00 1-31 * *", async function () {
 app.post("/member-check", (req, res) => {
     let checkEmail = req.body.member_email
     if (checkEmail === undefined)
-        res.status(401).send(false)
+        res.status(401).json({
+            content: false
+        })
     else {
         let emailCheckSql = "select member_email, member_secede, member_ban from member where member_email = ?;"
         let selectParam = [checkEmail]
         getConnection((conn) => {
             conn.query(emailCheckSql, selectParam, function (error, rows, fields) {
                 if (error) {
-                    res.status(500).send("DB Error")
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let value = func.emailCheck(isEmail)
                     // 중복된 이메일이 없음
                     if (value === 200)
-                        res.status(200).send("empty")
+                        res.status(200).json({ content:"empty"})
                     else if (value === 401 && rows[0].member_secede === 0) {
                         // 정지되지 않은 회원.(정상적인 회원)
                         if (rows[0].member_ban === 0)
-                            res.status(200).send("OK")
+                            res.status(200).json({ content:"OK"})
                         else
                             // member_ban === 1 정지된 회원
-                            res.status(401).send("ban")
+                            res.status(401).json({content:"ban"})
                     } else {
                         // 탈퇴한 회원
-                        res.status(401).send("secede")
+                        res.status(401).json({content: "secede"})
                     }
                 }
                 conn.release()

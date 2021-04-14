@@ -1,4 +1,4 @@
-### API 개발 진행률 82/83(99%)
+### API 개발 진행률 82/82(100%)
 <table>
 <thead>
 <tr>
@@ -47,11 +47,6 @@
 <td>포인트 API</td>
 <td>8</td>
 <td>8</td>
-</tr>
-<tr>
-<td>페이지네이션 API</td>
-<td>0</td>
-<td>1</td>
 </tr>
 </tbody>
 </table>
@@ -1151,20 +1146,6 @@
     1. Key : use_point, Value : 사용할 포인트
     2. Key : use_code, Value : 구분자
 * Description : 관리자는 포인트 사용 현황 보기 에서 확인 후 "사용" 내역에 해당하는 포인트로(사용자가 사용 요청한 포인트) 사용자 이메일에 해당하는 사용 포인트, 사용자 포인트(누적 포인트 - 사용 포인트) 업데이트, point 테이블 수락 flag 1로 업데이트.
-* Success Response
-    1. Code : 200
-    2. Content : true
-* Error Response
-    1. Code : 400
-    2. Content : false
-
-# 페이지네이션 API
-## 페이지네이션
-* URL : http://{IP}:{PORT}/{admin/member}/{게시판 이름}/pagination
-* Method : GET
-* URL Params
-    1. Key : pageNum, Value : 조회할 게시글 페이지 번호
-* Description : page 값이 1일 경우 해당 게시글 조회 API 호출 / 2 이상일 경우 전 페이지의 15번째 글 이후 15개 씩 조회
 * Success Response
     1. Code : 200
     2. Content : true
