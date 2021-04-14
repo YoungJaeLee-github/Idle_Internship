@@ -2834,4 +2834,378 @@ app.post("/contact/resp", (req, res) => {
     }
 })
 
+// 37. 포인트 현황 조회(관리자)
+app.post("/point/now", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.member_email === undefined) {
+        res.status(401).json({
+            content: false
+        })
+    } else {
+        getConnection((conn) => {
+            let adminCheckSql = "select admin_secede from admin where admin_email = ?;"
+            let adminCheckParam = [req.session.admin_email]
+            conn.query(adminCheckSql, adminCheckParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0) {
+                        res.status(404).json({
+                            content: false
+                        })
+                    } else {
+                        if (rows[0].admin_secede === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let memberCheckSql = "select member_ban, member_secede from member where member_email = ?;"
+                            let memberCheckParam = [req.body.member_email]
+                            conn.query(memberCheckSql, memberCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0) {
+                                        res.status(404).json({
+                                            content: false
+                                        })
+                                    } else {
+                                        if (rows[0].member_ban === 1 || rows[0].member_secede === 1) {
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        } else {
+                                            let searchPointSql = "select member_email, member_name, member_rank, member_point, save_point, use_point from member where member_email = ?;"
+                                            let searchPointParam = [req.body.member_email]
+                                            conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0) {
+                                                        res.status(401).json({
+                                                            content: false
+                                                        })
+                                                    } else {
+                                                        let pointInfoStruct = []
+                                                        pointInfoStruct.push({
+                                                            member_email: rows[0].member_email,
+                                                            member_name: rows[0].member_name,
+                                                            member_rank: rows[0].member_rank,
+                                                            member_point: rows[0].member_point,
+                                                            save_point: rows[0].save_point,
+                                                            use_point: rows[0].use_point
+                                                        })
+                                                        res.status(200).json({
+                                                            pointInfoStruct
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 38. 포인트 사용내역 조회(관리자)
+app.post("/point/use-history", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.member_email === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let adminCheckSql = "select admin_secede from admin where admin_email = ?;"
+            let adminCheckParam = [req.session.admin_email]
+            conn.query(adminCheckSql, adminCheckParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(404).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].admin_secede === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let memberCheckSql = "select member_email, member_name, member_ban, member_secede from member where member_email = ?;"
+                            let memberCheckParam = [req.body.member_email]
+                            conn.query(memberCheckSql, memberCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(404).json({
+                                            content: false
+                                        })
+                                    else {
+                                        if (rows[0].member_ban === 1 || rows[0].member_secede === 1)
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        else {
+                                            let memberEmail = rows[0].member_email
+                                            let memberName = rows[0].member_name
+                                            let searchPointSql = "select use_contents, point, use_date, accept_flag, use_code from point where member_email = ?;"
+                                            let searchPointParam = [req.body.member_email]
+                                            conn.query(searchPointSql, searchPointParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0)
+                                                        res.status(404).json({
+                                                            content: false
+                                                        })
+                                                    else {
+                                                        let pointInfoStruct = []
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            if (rows[i].accept_flag === null) {
+                                                                pointInfoStruct.push({
+                                                                    member_email: memberEmail,
+                                                                    member_name: memberName,
+                                                                    use_contents: rows[i].use_contents,
+                                                                    point: rows[i].point,
+                                                                    use_date: rows[i].use_date,
+                                                                })
+                                                            } else {
+                                                                pointInfoStruct.push({
+                                                                    member_email: memberEmail,
+                                                                    member_name: memberName,
+                                                                    use_contents: rows[i].use_contents,
+                                                                    point: rows[i].point,
+                                                                    use_date: rows[i].use_date,
+                                                                    accept_flag: rows[i].accept_flag,
+                                                                    use_code: rows[i].use_code
+                                                                })
+                                                            }
+                                                        }
+                                                        res.status(200).json({
+                                                            pointInfoStruct
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 39. 포인트 적립내역 조회(관리자)
+app.post("/point/point-history", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.member_email === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let adminCheckSql = "select admin_secede from admin where admin_email = ?;"
+            let adminCheckParam = [req.session.admin_email]
+            conn.query(adminCheckSql, adminCheckParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(404).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].admin_secede === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let memberCheckSql = "select member_email, member_name, member_ban, member_secede from member where member_email = ?;"
+                            let memberCheckParam = [req.body.member_email]
+                            conn.query(memberCheckSql, memberCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(404).json({
+                                            content: false
+                                        })
+                                    else {
+                                        if (rows[0].member_ban === 1 || rows[0].member_secede === 1)
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        else {
+                                            let memberEmail = rows[0].member_email
+                                            let memberName = rows[0].member_name
+                                            let searchIdeaPointSql = "select idea_title, add_point, date_point, idea_date from idea where member_email = ? and idea_delete != ?;"
+                                            let searchIdeaPointParam = [req.body.member_email, 1]
+                                            conn.query(searchIdeaPointSql, searchIdeaPointParam, function (error, rows) {
+                                                if (error) {
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    if (rows.length === 0)
+                                                        res.status(404).json({
+                                                            content: false
+                                                        })
+                                                    else {
+                                                        let ideaPointStruct = []
+                                                        for (let i = 0; i < rows.length; i++) {
+                                                            if (rows[i].date_point === null) {
+                                                                ideaPointStruct.push({
+                                                                    member_email: memberEmail,
+                                                                    member_name: memberName,
+                                                                    idea_title: rows[i].idea_title,
+                                                                    add_point: rows[i].add_point,
+                                                                    date_point: rows[i].idea_date
+                                                                })
+                                                            } else {
+                                                                ideaPointStruct.push({
+                                                                    member_email: memberEmail,
+                                                                    member_name: memberName,
+                                                                    idea_title: rows[i].idea_title,
+                                                                    add_point: rows[i].add_point,
+                                                                    date_point: rows[i].date_point
+                                                                })
+                                                            }
+                                                        }
+                                                        res.status(200).json({
+                                                            ideaPointStruct
+                                                        })
+                                                    }
+                                                }
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
+// 40. 포인트 사용 수락(관리자)
+app.patch("/point/use-point", (req, res) => {
+    if (req.session.admin_email === undefined || req.body.use_point === undefined || req.body.use_code === undefined)
+        res.status(401).json({
+            content: false
+        })
+    else {
+        getConnection((conn) => {
+            let adminCheckSql = "select admin_secede from admin where admin_email = ?;"
+            let adminCheckParam = [req.session.admin_email]
+            conn.query(adminCheckSql, adminCheckParam, function (error, rows) {
+                if (error) {
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    if (rows.length === 0)
+                        res.status(404).json({
+                            content: false
+                        })
+                    else {
+                        if (rows[0].admin_secede === 1)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            let memberCheckSql = "select member_ban, member_secede, save_point, use_point, member_email, member_point from member where member_email = (select member_email from point where use_code = ?)"
+                            let memberCheckParam = [req.body.use_code]
+                            conn.query(memberCheckSql, memberCheckParam, function (error, rows) {
+                                if (error) {
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(404).json({
+                                            content: false
+                                        })
+                                    else {
+                                        if (rows[0].member_ban === 1 || rows[0].member_secede === 1)
+                                            res.status(401).json({
+                                                content: false
+                                            })
+                                        else {
+                                            if (rows[0].member_point < req.body.use_point) {
+                                                res.status(401).json({
+                                                    content: false
+                                                })
+                                            } else {
+                                                let updatePointSql = "update point set use_date = " + conn.escape(new Date()) + ", accept_flag = " + conn.escape(1) +
+                                                    ", admin_email = " + conn.escape(req.session.admin_email) + " where use_code = " + conn.escape(req.body.use_code) +
+                                                    " and accept_flag is not null and accept_flag != " + conn.escape(1) + ";"
+                                                updatePointSql += "update member set member_point = " + conn.escape(rows[0].save_point - (rows[0].use_point + req.body.use_point)) +
+                                                    ", use_point = " + conn.escape(rows[0].use_point + req.body.use_point) + " where member_email = " + conn.escape(rows[0].member_email) + ";"
+                                                conn.query(updatePointSql, function (error) {
+                                                    if (error) {
+                                                        console.error(error)
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
+                                                    } else {
+                                                        res.status(200).json({
+                                                            content: true
+                                                        })
+                                                    }
+                                                })
+                                            }
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                conn.release()
+            })
+        })
+    }
+})
+
 module.exports = app;

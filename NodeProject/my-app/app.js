@@ -9,6 +9,8 @@ const csRouter = require('./routes/cs.js')
 const noticeRouter = require('./routes/notice.js')
 const contactRouter = require('./routes/contact.js')
 const ideaRouter = require('./routes/idea.js')
+const announcementRouter = require('./routes/announcement.js')
+const pointRouter = require('./routes/point.js')
 const app = express();
 
 // let indexRouter = require('./routes/index');
@@ -29,6 +31,8 @@ app.use('/cs', csRouter)
 app.use('/notice', noticeRouter)
 app.use('/contact', contactRouter)
 app.use('/idea', ideaRouter)
+app.use('/announcement', announcementRouter)
+app.use('/point', pointRouter)
 app.use(express.json())
 // app.use('/', indexRouter);
 // app.use('/users', usersRouter);

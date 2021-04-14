@@ -1,4 +1,4 @@
-### API 개발 진행률 69/81(85%)
+### API 개발 진행률 82/83(99%)
 <table>
 <thead>
 <tr>
@@ -40,13 +40,13 @@
 </tr>
 <tr>
 <td>공고정보 게시판 API</td>
-<td>0</td>
+<td>5</td>
 <td>5</td>
 </tr>
 <tr>
 <td>포인트 API</td>
-<td>0</td>
-<td>6</td>
+<td>8</td>
+<td>8</td>
 </tr>
 <tr>
 <td>페이지네이션 API</td>
@@ -995,7 +995,7 @@
 
 # 공고정보게시판 API
 ## 공고정보 조회(사용자)
-* URL : http://{IP}:{PORT}/anno/list
+* URL : http://{IP}:{PORT}/announcement/list
 * Method : GET
 * Description : 공고정보를 15개씩 조회할 수 있음
 * Success Response
@@ -1006,11 +1006,11 @@
     2. Content : false
 
 ## 공고정보 상세 조회(사용자)
-* URL : http://{IP}:{PORT}/anno/detail
+* URL : http://{IP}:{PORT}/announcement/detail
 * Method : GET
 * URL Params
     1. Key : anno_id, Value : 조회할 공고 정보 번호
-* Description : 해당 공고에 대한 상세 내용을 조회
+* Description : 해당 공고에 대한 상세 내용을 조회, 현재 세션의 즐겨찾기 정보 가져오기. ajax 비동기 통신으로 구현 할 것.
 * Success Response
     1. Code : 200
     2. Content : true
@@ -1019,7 +1019,7 @@
     2. Content : false
 
 ## 공고정보 검색(사용자)
-* URL : http://{IP}:{PORT}/anno/search-title
+* URL : http://{IP}:{PORT}/announcement/search-title
 * Method : GET
 * URL Params
     1. Key : anno_title, Value : 검색할 공고 제목
@@ -1032,7 +1032,7 @@
     2. Content : false
 
 ## 출처링크 바로가기
-* URL : http://{IP}:{PORT}/anno/link
+* URL : http://{IP}:{PORT}/announcement/link
 * Method : GET
 * URL Params
     1. Key : anno_id, Value : 해당 공고 번호
@@ -1045,10 +1045,11 @@
     2. Content : false
 
 ## 즐겨찾기 등록/삭제
-* URL : http://{IP}:{PORT}/anno/mark
+* URL : http://{IP}:{PORT}/announcement/mark
 * Method : PATCH
 * URL Params
     1. Key : anno_id, Value : 해당 공고 번호
+    2. Key : marked_flag, Value : 즐겨찾기 저장/삭제 값
 * Description : 관심사업 테이블에서 현재 세션의 이메일 정보의 공고 번호 저장/삭제
 * Success Response
     1. Code : 200
@@ -1058,10 +1059,10 @@
     2. Content : false
 
 # 포인트 API
-## 포인트 현황 조회
-* URL : http://{IP}:{PORT}/{admin/member}/point/now
+## 포인트 현황 조회(사용자)
+* URL : http://{IP}:{PORT}/point/now
 * Method : GET
-* Description : 이메일에 해당하는 사용자의 순위, 현재 포인트, 누적 포인트, 사용 포인트 조회
+* Description : 세션 이메일에 해당하는 사용자의 순위, 현재 포인트, 누적 포인트, 사용 포인트 조회
 * Success Response
     1. Code : 200
     2. Content : true
@@ -1069,10 +1070,23 @@
     1. Code : 401
     2. Content : false
 
-## 포인트 사용내역 조회
-* URL : http://{IP}:{PORT}/{admin/member}/point/use-history
+## 포인트 현황 조회(관리자)
+* URL : http://{IP}:{PORT}/admin/point/now
+* Method : POST
+  * URL Params
+  1. Key : member_email, Value : 조회할 사용자 이메일
+* Description : 입력된 이메일에 해당하는 사용자의 순위, 현재 포인트, 누적 포인트, 사용 포인트 조회
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : false
+
+## 포인트 사용내역 조회(사용자)
+* URL : http://{IP}:{PORT}/point/use-history
 * Method : GET
-* Description : 이메일에 해당하는 사용자의 포인트 사용내역 조회
+* Description : 현재 세션 이메일에 해당하는 사용자의 포인트 사용내역 조회
 * Success Response
     1. Code : 200
     2. Content : true
@@ -1080,20 +1094,46 @@
     1. Code : 401
     2. Content : false
 
-## 포인트 적립내역 조회
-* URL : http://{IP}:{PORT}/{admin/member}/point/point-history
+## 포인트 사용 내역 조회(관리자)
+* URL : http://{IP}:{PORT}/admin/point/use-history
+* Method : POST
+* URL Params
+  1. Key : member_email, Value : 조회할 사용자 이메일
+* Description : 현재 사용 가능한 포인트, point 테이블 내역 조회
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 400
+  2. Content : false
+
+## 포인트 적립내역 조회(사용자)
+* URL : http://{IP}:{PORT}/point/point-history
 * Method : GET
-* Description : 사용자의 아이디어 제목(적립 내역), 얻은 포인트, 적립 날짜 조회
+* Description : 현재 세션 사용자의 아이디어 제목(적립 내역), 얻은 포인트, 적립 날짜 조회
 * Success Response
     1. Code : 200
     2. Content : true
 * Error Response
     1. Code : 401
     2. Content : false
+
+## 포인트 적립내역 조회(관리자)
+* URL : http://{IP}:{PORT}/admin/point/point-history
+* Method : POST
+  * URL Params
+  1. Key : member_email, Value : 조회할 사용자 이메일
+* Description : 입력된 사용자 이메일의 아이디어 제목(적립 내역), 얻은 포인트, 적립 날짜 조회
+* Success Response
+  1. Code : 200
+  2. Content : true
+* Error Response
+  1. Code : 401
+  2. Content : false
   
-## 포인트 사용(사용자)
-* URL : http://{IP}:{PORT}/member/point/use-point
-* Method : PATCH
+## 포인트 사용 요청(사용자)
+* URL : http://{IP}:{PORT}/point/use-point
+* Method : POST
 * URL Params
   1. Key : use_point, Value : 사용할 포인트
 * Description : 현재 사용 가능한 point까지만 사용가능. point 테이블 정보 "사용" 으로 업데이트.
@@ -1104,26 +1144,13 @@
   1. Code : 400
   2. Content : false
   
-## 포인트 사용 현황 보기(관리자)
-* URL : http://{IP}:{PORT}/admin/point/use-history
-* Method : GET
-* URL Params
-  1. Key : member_email, Value : 조회할 사용자 이메일
-* Description : 현재 사용 가능한 포인트, point 테이블 내역 중 "사용" 내역 중 수락 flag가 0 인 것 최근 순으로 조회.
-* Success Response
-  1. Code : 200
-  2. Content : true
-* Error Response
-  1. Code : 400
-  2. Content : false
-  
-## 포인트 사용 업데이트(관리자)
-* URL : http://{IP}:{PORT}/admin/use-point
+## 포인트 사용 수락(관리자)
+* URL : http://{IP}:{PORT}/admin/point/use-point
 * Method : PATCH
 * URL Params
-    1. Key : point, Value : 사용할 포인트
-    2. Key : use_contents, Value : 사용 내역
-* Description : 관리자는 포인트 사용 현황 보기 에서 확인 후 "사용" 내역에 해당하는 포인트로(사용자가 사용 요청한 포인트) 사용자 이메일에 해당하는 사용 포인트, 사용자 포인트(누적 포인트 - 사용 포인트) 업데이트, point 테이블 수락 flag 업데이트.
+    1. Key : use_point, Value : 사용할 포인트
+    2. Key : use_code, Value : 구분자
+* Description : 관리자는 포인트 사용 현황 보기 에서 확인 후 "사용" 내역에 해당하는 포인트로(사용자가 사용 요청한 포인트) 사용자 이메일에 해당하는 사용 포인트, 사용자 포인트(누적 포인트 - 사용 포인트) 업데이트, point 테이블 수락 flag 1로 업데이트.
 * Success Response
     1. Code : 200
     2. Content : true
