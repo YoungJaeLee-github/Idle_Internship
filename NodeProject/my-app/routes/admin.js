@@ -283,25 +283,25 @@ cron.schedule("*/10 * * * * *", async function () {
 //     console.log("Contents Crawling End.")
 // })
 
-cron.schedule("*/30 * * * * *", async function () {
-    console.log("Contents Crawling Start.")
-    const browser = await puppeteer.launch({
-        headless: false,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    })
-    const page = await browser.newPage()
-    await page.setViewport({
-        width: 1920,
-        height: 1080
-    })
-
-    await contentsCrawling(page)
-
-    await page.waitFor(10000)
-    await browser.close()
-
-    console.log("Contents Crawling End.")
-})
+// cron.schedule("*/30 * * * * *", async function () {
+//     console.log("Contents Crawling Start.")
+//     const browser = await puppeteer.launch({
+//         headless: false,
+//         args: ['--no-sandbox', '--disable-setuid-sandbox']
+//     })
+//     const page = await browser.newPage()
+//     await page.setViewport({
+//         width: 1920,
+//         height: 1080
+//     })
+//
+//     await contentsCrawling(page)
+//
+//     await page.waitFor(10000)
+//     await browser.close()
+//
+//     console.log("Contents Crawling End.")
+// })
 
 /**
  * --------------------------------------------------------------------------------------------------------
