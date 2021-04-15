@@ -464,7 +464,7 @@ app.patch("/mark", (req, res) => {
                                                     if (req.body.marked_flag === 0) {
                                                         let deleteMarkSql = "delete from inter_anno where member_email = ? and anno_id = ?"
                                                         let deleteMarkParam = [req.session.member_email, req.body.anno_id]
-                                                        conn.query(deleteMarkSql, deleteMarkParam, function (error, rows) {
+                                                        conn.query(deleteMarkSql, deleteMarkParam, function (error) {
                                                             if (error) {
                                                                 console.error(error)
                                                                 res.status(500).json({
