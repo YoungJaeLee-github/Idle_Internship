@@ -303,7 +303,7 @@ cron.schedule("*/30 * * * * *", async function () {
 
     await contentsCrawling(page)
 
-    await page.waitFor(10000)
+    await page.waitFor(40000)
     await browser.close()
 
     console.log("Contents Crawling End.")
