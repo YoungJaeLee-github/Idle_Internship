@@ -65,7 +65,7 @@ app.post("/regist", upload.any(), (req, res) => {
                         } else {
                             let insertCsSql = "insert into cs(cs_title, cs_contents, cs_date, member_email, cs_secret, cs_delete)" +
                                 "values(?, ?, ?, ?, ?, ?)"
-                            let insertCsParam = [req.body.cs_title, req.body.cs_contents, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), req.session.member_email, req.body.cs_secret, 0]
+                            let insertCsParam = [req.body.cs_title, req.body.cs_contents, moment(new Date()).format("YYYY-MM-DD"), req.session.member_email, req.body.cs_secret, 0]
                             conn.query(insertCsSql, insertCsParam, function (error) {
                                 if (error) {
                                     for (let i = 0; i < req.files.length; i++) {

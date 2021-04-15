@@ -979,7 +979,7 @@ app.delete("/idea/remove", (req, res) => {
                                                 let totalSql = "update idea set idea_delete = " + conn.escape(1) + ", admin_email = " +
                                                     conn.escape(req.session.admin_email) + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
                                                 totalSql += " insert into point(member_email, use_date, use_contents, point) values(" +
-                                                    conn.escape(memberEmail) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape("아이디어 삭제") + ", " +
+                                                    conn.escape(memberEmail) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD")) + ", " + conn.escape("아이디어 삭제") + ", " +
                                                     conn.escape(originalPoint) + ");"
                                                 totalSql += " update member set member_point = " + conn.escape(todoAddMemberPoint) + ", save_point = " +
                                                     conn.escape(todoAddSavePoint) + " where member_email = " + conn.escape(memberEmail) + ";"
@@ -1168,7 +1168,7 @@ app.patch("/point/cancel", (req, res) => {
                                                 })
                                                 // point 테이블 insert.
                                                 let insertPointSql = "insert into point (member_email, use_date, use_contents, point) values((select member_email from idea where idea_id = ?), ?, ?, ?);"
-                                                let insertPointParam = [ideaId, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), "회수", req.body.cancel_point]
+                                                let insertPointParam = [ideaId, moment(new Date()).format("YYYY-MM-DD"), "회수", req.body.cancel_point]
                                                 conn.query(insertPointSql, insertPointParam, function (error, rows) {
                                                     if (error) {
                                                         console.error(error)
@@ -1264,7 +1264,7 @@ app.post("/notice/regist", upload.any(), (req, res) => {
     } else {
         getConnection((conn) => {
             let insertNoticeSql = "insert into notice(notice_title, notice_contents, notice_date, admin_email, notice_delete) values(" + conn.escape(req.body.notice_title)
-                + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
+                + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD")) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
             conn.query(insertNoticeSql, function (error) {
                 if (error) {
                     for (let i = 0; i < req.files.length; i++) {
@@ -1729,7 +1729,7 @@ app.post("/cs/resp/regist", (req, res) => {
                             })
                         } else {
                             let updateCsRespSql = "update cs set admin_email = ?, cs_resp = ?, cs_resp_date = ? where cs_id = ?"
-                            let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), req.body.cs_id]
+                            let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', moment(new Date()).format("YYYY-MM-DD"), req.body.cs_id]
                             conn.query(updateCsRespSql, updateCsRespParam, function (error) {
                                 if (error) {
                                     console.error(error)
@@ -4205,7 +4205,7 @@ app.patch("/point/use-point", (req, res) => {
                                                     content: false
                                                 })
                                             } else {
-                                                let updatePointSql = "update point set use_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", accept_flag = " + conn.escape(1) +
+                                                let updatePointSql = "update point set use_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD")) + ", accept_flag = " + conn.escape(1) +
                                                     ", admin_email = " + conn.escape(req.session.admin_email) + " where use_code = " + conn.escape(req.body.use_code) +
                                                     " and accept_flag is not null and accept_flag != " + conn.escape(1) + ";"
                                                 updatePointSql += "update member set member_point = " + conn.escape(rows[0].save_point - (rows[0].use_point + req.body.use_point)) +

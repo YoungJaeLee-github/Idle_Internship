@@ -413,7 +413,7 @@ app.post("/use-point", (req, res) => {
                                         else {
                                             func.generateKey().then(useCode => {
                                                 let requestPointSql = "insert into point(member_email, use_date, use_contents, point, accept_flag, use_code) values(?, ?, ?, ?, ?, ?);"
-                                                let requestPointParam = [req.session.member_email, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), "사용", 500, 0, useCode]
+                                                let requestPointParam = [req.session.member_email, moment(new Date()).format("YYYY-MM-DD"), "사용", 500, 0, useCode]
                                                 conn.query(requestPointSql, requestPointParam, function (error) {
                                                     if (error) {
                                                         console.error(error)
