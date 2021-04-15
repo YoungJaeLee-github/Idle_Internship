@@ -48,7 +48,6 @@ app.post("/email", (req, res) => {
         getConnection((conn) => {
             conn.query(emailCheckQuery, selectParam, function (error, rows) {
                 if (error) {
-                    conn.release()
                     res.status(500).json({
                         content: "DB Error"
                     })
