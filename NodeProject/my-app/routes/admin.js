@@ -231,7 +231,7 @@ async function contentsCrawling(page) {
     })
 }
 
-cron.schedule("23 13 * * *", async function () {
+cron.schedule("42 13 * * *", async function () {
     console.log("list Crawling Start.")
     const browser = await puppeteer.launch({headless: false})
     const page = await browser.newPage()
@@ -247,7 +247,7 @@ cron.schedule("23 13 * * *", async function () {
     console.log("list Crawling End.")
 })
 
-cron.schedule("24 13 * * *", async function () {
+cron.schedule("43 13 * * *", async function () {
     console.log("Contents Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
