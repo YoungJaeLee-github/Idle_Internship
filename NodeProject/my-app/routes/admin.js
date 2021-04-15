@@ -399,7 +399,7 @@ app.post("/signup", (req, res) => {
         let searchEmailSql = "select admin_email, admin_secede from admin where admin_email = ?;"
         let searchEmailParam = [adminEmail]
         let insertLogSql = "insert into admin_log(admin_email, admin_log_join, admin_login_lately) values(?, ?, ?);"
-        let insertLogParam = [adminEmail, moment(new Date()), moment(new Date())]
+        let insertLogParam = [adminEmail, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), moment(new Date()).format("YYYY-MM-DD HH:mm:ss")]
         getConnection((conn) => {
             conn.query(searchEmailSql, searchEmailParam, function (error, rows) {
                 if (error) {
@@ -578,7 +578,7 @@ app.post("/login", (req, res) => {
                                     })
                                     conn.beginTransaction()
                                     let updateLogSql = "update admin_log set admin_login_lately = ? where admin_email = ?;"
-                                    let updateLogParam = [moment(new Date()), adminEmail]
+                                    let updateLogParam = [moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail]
                                     conn.query(updateLogSql, updateLogParam, function (error) {
                                         if (error) {
                                             console.error(error)
@@ -759,7 +759,7 @@ app.patch("/member-ban", (req, res) => {
                                                         // 처음 정지 될 때
                                                         if (emailCheckValue === 200) {
                                                             let insertBanSql = "insert into member_ban(member_email, member_ban_reason, member_ban_date, admin_email) values(?, ? ,?, ?);"
-                                                            let insertBanParam = [todoBanMemberEmail, banReason, moment(new Date()), adminEmail]
+                                                            let insertBanParam = [todoBanMemberEmail, banReason, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail]
                                                             conn.query(insertBanSql, insertBanParam, function (error) {
                                                                 if (error) {
                                                                     console.error(error)
@@ -773,7 +773,7 @@ app.patch("/member-ban", (req, res) => {
                                                         } else {
                                                             // 정지 해제 후 다시 정지 될 때
                                                             let updateReBanSql = "update member_ban set member_ban_reason = ?, member_ban_date = ?, admin_email = ? where member_email = ?;"
-                                                            let updateReBanParam = [banReason, moment(new Date()), adminEmail, todoBanMemberEmail]
+                                                            let updateReBanParam = [banReason, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail, todoBanMemberEmail]
                                                             conn.query(updateReBanSql, updateReBanParam, function (error) {
                                                                 if (error) {
                                                                     console.error(error)
@@ -871,7 +871,7 @@ app.patch("/member-ban-release", (req, res) => {
                                         crypto.encryptByHash(adminPw, rows[0].admin_salt).then(encryptedPw => {
                                             if (encryptedPw === req.session.admin_pw) {
                                                 let updateBanLogSql = "update member_ban set member_ban_reason = ?, member_ban_date = ?, admin_email = ? where member_email = ?;"
-                                                let updateBanLogParam = [releaseReason, moment(new Date()), adminEmail, todoReleaseEmail]
+                                                let updateBanLogParam = [releaseReason, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail, todoReleaseEmail]
                                                 let updateBanSql = "update member set member_ban = ? where member_email = ?"
                                                 let updateBanParam = [0, todoReleaseEmail]
 
@@ -979,7 +979,7 @@ app.delete("/idea/remove", (req, res) => {
                                                 let totalSql = "update idea set idea_delete = " + conn.escape(1) + ", admin_email = " +
                                                     conn.escape(req.session.admin_email) + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
                                                 totalSql += " insert into point(member_email, use_date, use_contents, point) values(" +
-                                                    conn.escape(memberEmail) + ", " + conn.escape(moment(new Date())) + ", " + conn.escape("아이디어 삭제") + ", " +
+                                                    conn.escape(memberEmail) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape("아이디어 삭제") + ", " +
                                                     conn.escape(originalPoint) + ");"
                                                 totalSql += " update member set member_point = " + conn.escape(todoAddMemberPoint) + ", save_point = " +
                                                     conn.escape(todoAddSavePoint) + " where member_email = " + conn.escape(memberEmail) + ";"
@@ -1060,7 +1060,7 @@ app.patch("/point/give", (req, res) => {
                                             })
                                         else {
                                             let updateIdeaPointSql = "update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?"
-                                            let updateIdeaPointParam = [req.session.admin_email, givePoint + originalPoint, moment(new Date()), ideaId]
+                                            let updateIdeaPointParam = [req.session.admin_email, givePoint + originalPoint, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), ideaId]
                                             conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows) {
                                                 if (error) {
                                                     console.error(error)
@@ -1156,7 +1156,7 @@ app.patch("/point/cancel", (req, res) => {
                                                 })
                                             else {
                                                 let updateIdeaPointSql = "update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?;"
-                                                let updateIdeaPointParam = [req.session.admin_email, originalPoint - req.body.cancel_point, moment(new Date()), ideaId]
+                                                let updateIdeaPointParam = [req.session.admin_email, originalPoint - req.body.cancel_point, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), ideaId]
                                                 conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows) {
                                                     if (error) {
                                                         console.error(error)
@@ -1168,7 +1168,7 @@ app.patch("/point/cancel", (req, res) => {
                                                 })
                                                 // point 테이블 insert.
                                                 let insertPointSql = "insert into point (member_email, use_date, use_contents, point) values((select member_email from idea where idea_id = ?), ?, ?, ?);"
-                                                let insertPointParam = [ideaId, moment(new Date()), "회수", req.body.cancel_point]
+                                                let insertPointParam = [ideaId, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), "회수", req.body.cancel_point]
                                                 conn.query(insertPointSql, insertPointParam, function (error, rows) {
                                                     if (error) {
                                                         console.error(error)
@@ -1264,7 +1264,7 @@ app.post("/notice/regist", upload.any(), (req, res) => {
     } else {
         getConnection((conn) => {
             let insertNoticeSql = "insert into notice(notice_title, notice_contents, notice_date, admin_email, notice_delete) values(" + conn.escape(req.body.notice_title)
-                + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(moment(new Date())) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
+                + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
             conn.query(insertNoticeSql, function (error) {
                 if (error) {
                     for (let i = 0; i < req.files.length; i++) {
@@ -1381,7 +1381,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title) +
                                                             ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
                                                             + "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " +
-                                                            conn.escape(moment(new Date())) + ", " + conn.escape(req.session.admin_email) + ");"
+                                                            conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.admin_email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -1406,7 +1406,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) +
                                                             "; update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " + conn.escape(req.body.notice_contents) +
                                                             " where notice_id = " + conn.escape(req.body.notice_id) +
-                                                            "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " + conn.escape(moment(new Date())) +
+                                                            "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) +
                                                             ", " + conn.escape(req.session.admin_email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1446,7 +1446,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id)
-                                                            + ", " + conn.escape(moment(new Date())) + ", " + conn.escape(req.session.email) + ");"
+                                                            + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -1478,7 +1478,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) +
-                                                            ", " + conn.escape(moment(new Date())) + ", " + conn.escape(req.session.admin_email) + ");"
+                                                            ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.admin_email) + ");"
 
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1517,7 +1517,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         // 업로드할 파일도 없고, 기존에 파일이 없는 경우
                                                         let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title) +
                                                             ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
-                                                            + "; update notice_log set notice_edit_date = " + conn.escape(moment(new Date())) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            + "; update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1543,7 +1543,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) +
                                                             "; update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " + conn.escape(req.body.notice_contents) +
                                                             " where notice_id = " + conn.escape(req.body.notice_id) +
-                                                            "; update notice_log set notice_edit_date = " + conn.escape(moment(new Date())) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            "; update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1582,7 +1582,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(moment(new Date())) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1614,7 +1614,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(moment(new Date())) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
 
                                                         conn.query(editTotalSql, function (error) {
@@ -1729,7 +1729,7 @@ app.post("/cs/resp/regist", (req, res) => {
                             })
                         } else {
                             let updateCsRespSql = "update cs set admin_email = ?, cs_resp = ?, cs_resp_date = ? where cs_id = ?"
-                            let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', moment(new Date()), req.body.cs_id]
+                            let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), req.body.cs_id]
                             conn.query(updateCsRespSql, updateCsRespParam, function (error) {
                                 if (error) {
                                     console.error(error)
@@ -3678,7 +3678,7 @@ app.post("/contact/resp", (req, res) => {
                             })
                         })
                         let updateContactRespSql = "update contact_log set contact_response = ?, admin_email = ? where contact_id = ?"
-                        let updateContactRespParam = [moment(new Date()), req.session.admin_email, req.body.contact_id]
+                        let updateContactRespParam = [moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), req.session.admin_email, req.body.contact_id]
                         conn.query(updateContactRespSql, updateContactRespParam, function (error) {
                             if (error) {
                                 console.error(error)
@@ -4205,7 +4205,7 @@ app.patch("/point/use-point", (req, res) => {
                                                     content: false
                                                 })
                                             } else {
-                                                let updatePointSql = "update point set use_date = " + conn.escape(moment(new Date())) + ", accept_flag = " + conn.escape(1) +
+                                                let updatePointSql = "update point set use_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", accept_flag = " + conn.escape(1) +
                                                     ", admin_email = " + conn.escape(req.session.admin_email) + " where use_code = " + conn.escape(req.body.use_code) +
                                                     " and accept_flag is not null and accept_flag != " + conn.escape(1) + ";"
                                                 updatePointSql += "update member set member_point = " + conn.escape(rows[0].save_point - (rows[0].use_point + req.body.use_point)) +

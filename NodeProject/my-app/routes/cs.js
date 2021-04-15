@@ -65,7 +65,7 @@ app.post("/regist", upload.any(), (req, res) => {
                         } else {
                             let insertCsSql = "insert into cs(cs_title, cs_contents, cs_date, member_email, cs_secret, cs_delete)" +
                                 "values(?, ?, ?, ?, ?, ?)"
-                            let insertCsParam = [req.body.cs_title, req.body.cs_contents, moment(new Date()), req.session.member_email, req.body.cs_secret, 0]
+                            let insertCsParam = [req.body.cs_title, req.body.cs_contents, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), req.session.member_email, req.body.cs_secret, 0]
                             conn.query(insertCsSql, insertCsParam, function (error) {
                                 if (error) {
                                     for (let i = 0; i < req.files.length; i++) {
@@ -575,7 +575,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "update cs set cs_title = " + conn.escape(req.body.cs_title) +
                                                             ", cs_contents = " + conn.escape(req.body.cs_contents) + ", cs_secret = " + conn.escape(req.body.cs_secret) + " where cs_id = " + conn.escape(req.body.cs_id)
                                                             + "; insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id) + ", " +
-                                                            conn.escape(moment(new Date())) + ");"
+                                                            conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -601,7 +601,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             "; update cs set cs_title = " + conn.escape(req.body.cs_title) + ", cs_contents = " + conn.escape(req.body.cs_contents) +
                                                             ", cs_secret = " + conn.escape(req.body.cs_secret) +
                                                             " where cs_id = " + conn.escape(req.body.cs_id) +
-                                                            "; insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id) + ", " + conn.escape(moment(new Date())) + ");"
+                                                            "; insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -641,7 +641,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id)
-                                                            + ", " + conn.escape(moment(new Date())) + ");"
+                                                            + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -674,7 +674,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id) +
-                                                            ", " + conn.escape(moment(new Date())) + ");"
+                                                            ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
 
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -715,7 +715,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             ", cs_contents = " + conn.escape(req.body.cs_contents) +
                                                             ", cs_secret = " + conn.escape(req.body.cs_secret) +
                                                             " where cs_id = " + conn.escape(req.body.cs_id)
-                                                            + "; update cs_log set cs_edit_date = " + conn.escape(moment(new Date()))
+                                                            + "; update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -742,7 +742,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             "; update cs set cs_title = " + conn.escape(req.body.cs_title) + ", cs_contents = " + conn.escape(req.body.cs_contents) +
                                                             ", cs_secret = " + conn.escape(req.body.cs_secret) +
                                                             " where cs_id = " + conn.escape(req.body.cs_id) +
-                                                            "; update cs_log set cs_edit_date = " + conn.escape(moment(new Date()))
+                                                            "; update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -783,7 +783,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into cs_file_dir(cs_id, cs_file_name, cs_file_path) values(" + conn.escape(req.body.cs_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update cs_log set cs_edit_date = " + conn.escape(moment(new Date()))
+                                                        editTotalSql += "update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -817,7 +817,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into cs_file_dir(cs_id, cs_file_name, cs_file_path) values(" + conn.escape(req.body.cs_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update cs_log set cs_edit_date = " + conn.escape(moment(new Date()))
+                                                        editTotalSql += "update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
 
                                                         conn.query(editTotalSql, function (error) {
