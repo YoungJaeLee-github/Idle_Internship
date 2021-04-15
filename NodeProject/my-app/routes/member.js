@@ -39,7 +39,7 @@ app.post("/agree", (req, res) => {
 // 2. 이메일 인증메일 보내기
 app.post("/email", (req, res) => {
     let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
-    console.log(tomorrow)
+    console.log(moment(new Date()))
     // let tempMemberEmail = req.body.rec_email
     // if (tempMemberEmail === undefined || req.cookies.chosen_agree === undefined)
     //     res.status(401).json({
