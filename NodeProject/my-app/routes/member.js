@@ -63,7 +63,7 @@ app.post("/email", (req, res) => {
                             urlAuthEmail += authKey
                             let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
                             let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
-                                + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree) +");"
+                                + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) +");"
                             getConnection((conn) => {
                                 conn.query(insertEmailAuth, function (error) {
                                     if (error) {
@@ -112,7 +112,7 @@ app.post("/email", (req, res) => {
                                 urlAuthEmail += authKey
                                 let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
                                 let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
-                                    + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree) +");"
+                                    + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) +");"
                                 conn.query(insertEmailAuth, function (error, rows) {
                                     if (error) {
                                         console.error(error)
