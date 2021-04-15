@@ -231,7 +231,7 @@ async function contentsCrawling(page) {
     })
 }
 
-cron.schedule("08 14 * * *", async function () {
+cron.schedule("19 14 * * *", async function () {
     console.log("list Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
@@ -248,9 +248,12 @@ cron.schedule("08 14 * * *", async function () {
     await page.waitFor(20000)
     await browser.close()
     console.log("list Crawling End.")
-})
+}, {
+        scheduled: true,
+        timezone: "Asia/Seoul"
+    })
 
-cron.schedule("09 14 * * *", async function () {
+cron.schedule("20 14 * * *", async function () {
     console.log("Contents Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
@@ -268,6 +271,9 @@ cron.schedule("09 14 * * *", async function () {
     await browser.close()
 
     console.log("Contents Crawling End.")
+}, {
+    scheduled: true,
+    timezone: "Asia/Seoul"
 })
 
 /**
