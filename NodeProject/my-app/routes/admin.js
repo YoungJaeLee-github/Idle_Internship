@@ -496,17 +496,21 @@ app.post("/signup", (req, res) => {
                                         })
 
                                         // log
+                                        conn.beginTransaction()
                                         conn.query(insertLogSql, insertLogParam, function (error) {
                                             if (error) {
+                                                conn.rollback()
                                                 console.error(error)
                                                 res.status(500).json({
                                                     content: "DB Error"
                                                 })
                                             } else {
+                                                conn.commit()
                                                 console.log("insert log success.")
                                             }
                                         })
                                     } else {
+                                        conn.rollback()
                                         // 이미 가입 되어 있는 회원.
                                         res.status(401).json({
                                             content: "already exists."
@@ -514,12 +518,15 @@ app.post("/signup", (req, res) => {
                                     }
                                 }
                             }).catch(error => {
+                                conn.rollback()
                                 console.error(error)
                             })
                         }).catch(error => {
+                            conn.rollback()
                             console.error(error)
                         })
                     }).catch(error => {
+                        conn.rollback()
                         console.error(error)
                     })
                 }
@@ -583,11 +590,13 @@ app.post("/login", (req, res) => {
                                     let updateLogParam = [moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail]
                                     conn.query(updateLogSql, updateLogParam, function (error) {
                                         if (error) {
+                                            conn.rollback()
                                             console.error(error)
                                             res.status(500).json({
                                                 content: "DB Error"
                                             })
                                         } else {
+                                            conn.commit()
                                             console.log("update login log success.")
                                         }
                                     })
@@ -664,26 +673,31 @@ app.delete("/secede", (req, res) => {
                                     } else {
                                         crypto.encryptByHash(rootPw, rows[0].admin_salt).then(encryptedPw => {
                                             if (encryptedPw === req.session.admin_pw) {
+                                                conn.beginTransaction()
                                                 let updateSecedeSql = "update admin set admin_secede = ? where admin_email = ?;"
                                                 let updateSecedeParam = [1, secedeEmail]
                                                 conn.query(updateSecedeSql, updateSecedeParam, function (error) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
+                                                        conn.commit()
                                                         res.status(200).json({
                                                             content: true
                                                         })
                                                     }
                                                 })
                                             } else {
+                                                conn.rollback()
                                                 res.status(401).json({
                                                     content: false
                                                 })
                                             }
                                         }).catch(error => {
+                                            conn.rollback()
                                             console.error(error)
                                         })
                                     }
@@ -774,15 +788,18 @@ app.patch("/member-ban", (req, res) => {
                                                             })
                                                         } else {
                                                             // 정지 해제 후 다시 정지 될 때
+                                                            conn.beginTransaction()
                                                             let updateReBanSql = "update member_ban set member_ban_reason = ?, member_ban_date = ?, admin_email = ? where member_email = ?;"
                                                             let updateReBanParam = [banReason, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail, todoBanMemberEmail]
                                                             conn.query(updateReBanSql, updateReBanParam, function (error) {
                                                                 if (error) {
+                                                                    conn.rollback()
                                                                     console.error(error)
                                                                     res.status(500).json({
                                                                         content: "DB Error"
                                                                     })
                                                                 } else {
+                                                                    conn.commit()
                                                                     console.log("update ban success.")
                                                                 }
                                                             })
@@ -790,24 +807,29 @@ app.patch("/member-ban", (req, res) => {
                                                     }
                                                 })
 
+                                                conn.beginTransaction()
                                                 conn.query(updateBanSql, updateBanParam, function (error) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
+                                                        conn.commit()
                                                         res.status(200).json({
                                                             content: true
                                                         })
                                                     }
                                                 })
                                             } else {
+                                                conn.rollback()
                                                 res.status(401).json({
                                                     content: false
                                                 })
                                             }
                                         }).catch(error => {
+                                            conn.rollback()
                                             console.error(error)
                                         })
                                     }
