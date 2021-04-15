@@ -56,14 +56,14 @@ app.post("/email", (req, res) => {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
                     let urlAuthEmail = "http://localhost:3000/member/email-check?auth_key="
-                    let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(?, ?, ?, ?, ?, ?);"
                     // 최초 가입.
                     if (memberCheckValue === 200) {
                         func.generateAuthKey().then(authKey => {
                             urlAuthEmail += authKey
-                            let insertParam = [authKey, 0, "DATE_ADD(NOW(), INTERVAL 1 DAY)", 0, tempMemberEmail, req.cookies.chosen_agree]
+                            let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
+                                + conn.escape(0) + conn.escape("DATE_ADD(NOW(), INTERVAL 1 DAY)") + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + conn.escape(req.cookies.chosen_agree) +");"
                             getConnection((conn) => {
-                                conn.query(insertEmailAuth, insertParam, function (error) {
+                                conn.query(insertEmailAuth, function (error) {
                                     if (error) {
                                         console.error(error)
                                         res.status(500).json({
@@ -108,8 +108,9 @@ app.post("/email", (req, res) => {
                         else {
                             func.generateAuthKey().then(authKey => {
                                 urlAuthEmail += authKey
-                                let insertParam = [authKey, 0, "DATE_ADD(NOW(), INTERVAL 1 DAY)", 0, tempMemberEmail, req.cookies.chosen_agree]
-                                conn.query(insertEmailAuth, insertParam, function (error, rows) {
+                                let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
+                                    + conn.escape(0) + conn.escape("DATE_ADD(NOW(), INTERVAL 1 DAY)") + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + conn.escape(req.cookies.chosen_agree) +");"
+                                conn.query(insertEmailAuth, function (error, rows) {
                                     if (error) {
                                         console.error(error)
                                         res.status(500).json({
@@ -648,9 +649,10 @@ app.post("/pw/find", (req, res) => {
                         // 정지, 탈퇴 여부 체크
                         if (rows[0].member_ban === 0 && rows[0].member_secede === 0) {
                             func.generateAuthKey().then(key => {
-                                let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(?, ?, ?, ?, ?)"
-                                let insertParam = [key, 0, "DATE_ADD(NOW(), INTERVAL 1 DAY)", 0, rows[0].member_email]
-                                conn.query(insertSql, insertParam, function (error, rows) {
+                                // let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(?, ?, ?, ?, ?)"
+                                let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values("+ conn.escape(key) + ", " + conn.escape(0) + ", "
+                                    + conn.escape("DATE_ADD(NOW(), INTERVAL 1 DAY)") + ", " + conn.escape(0) + ", " + conn.escape(rows[0].member_email) + ");"
+                                conn.query(insertSql, function (error, rows) {
                                     if (error) {
                                         console.error(error)
                                         res.status(500).json({
