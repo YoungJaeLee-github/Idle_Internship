@@ -12,6 +12,8 @@ const path = require("path")
 const func = require("../common/function.js")
 const logger = require("../config/winston_config.js").logger
 const moment = require("moment")
+require("moment-timezone")
+moment.tz.setDefault("Asia/Seoul")
 const sessionConfig = require("../config/session_config.js")
 app.use(sessionConfig.init())
 

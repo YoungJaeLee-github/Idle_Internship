@@ -18,6 +18,8 @@ const logger = require("../config/winston_config.js").logger
 const mailer = require("../config/mail_config.js")
 const transporter = mailer.init()
 const moment = require("moment")
+require("moment-timezone")
+moment.tz.setDefault("Asia/Seoul")
 app.use(sessionConfig.init())
 
 /**

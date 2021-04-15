@@ -9,6 +9,8 @@ const sessionConfig = require("../config/session_config.js")
 const getConnection = require("../config/database_config.js").getConnection
 const logger = require("../config/winston_config.js").logger
 const moment = require("moment")
+require("moment-timezone")
+moment.tz.setDefault("Asia/Seoul")
 app.use(sessionConfig.init())
 
 /**
