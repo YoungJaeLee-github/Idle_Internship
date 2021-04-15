@@ -90,6 +90,9 @@ cron.schedule("00 00 * * 1", function () {
             conn.release()
         })
     })
+}, {
+    schedule: true,
+    timezone: "Asia/Seoul"
 })
 
 /**
@@ -231,7 +234,7 @@ async function contentsCrawling(page) {
     })
 }
 
-cron.schedule("19 14 * * *", async function () {
+cron.schedule("00 00 1-31 * *", async function () {
     console.log("list Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
@@ -253,7 +256,7 @@ cron.schedule("19 14 * * *", async function () {
         timezone: "Asia/Seoul"
     })
 
-cron.schedule("20 14 * * *", async function () {
+cron.schedule("01 00 1-31 * *", async function () {
     console.log("Contents Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
