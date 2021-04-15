@@ -8,6 +8,7 @@ const app = express.Router()
 const sessionConfig = require("../config/session_config.js")
 const getConnection = require("../config/database_config.js").getConnection
 const logger = require("../config/winston_config.js").logger
+const moment = require("moment")
 app.use(sessionConfig.init())
 
 /**
@@ -79,7 +80,7 @@ app.post("/regist", (req, res) => {
                         conn.escape(req.body.email) + ", " + conn.escape(req.body.contact_title) + ", " +
                         conn.escape(req.body.contact_contents) + ");"
                     insertContactSql += "insert into contact_log(contact_id, contact_send) values((select contact_id from contact where email = " +
-                        conn.escape(req.body.email) + " order by contact_id desc limit " + conn.escape(1) + "), " + conn.escape("NOW()") + ");"
+                        conn.escape(req.body.email) + " order by contact_id desc limit " + conn.escape(1) + "), " + conn.escape(moment(new Date())) + ");"
                     if (rows.length === 0) {
                         conn.query(insertContactSql, function (error) {
                             if (error) {

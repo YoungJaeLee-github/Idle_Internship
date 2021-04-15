@@ -11,6 +11,7 @@ const fs = require("fs")
 const path = require("path")
 const func = require("../common/function.js")
 const logger = require("../config/winston_config.js").logger
+const moment = require("moment")
 const sessionConfig = require("../config/session_config.js")
 app.use(sessionConfig.init())
 
@@ -67,7 +68,7 @@ app.post("/regist", upload.any(), (req, res) => {
                             let todoAddSavePoint = savePoint + 500
                             let todoAddMemberPoint = todoAddSavePoint - usePoint
                             let totalSql = "insert into idea(idea_title, idea_contents, idea_date, member_email, add_point, idea_delete)" +
-                                "values( " + conn.escape(req.body.idea_title) + ", " + conn.escape(req.body.idea_contents) + ", " + conn.escape("NOW()") + ", " +
+                                "values( " + conn.escape(req.body.idea_title) + ", " + conn.escape(req.body.idea_contents) + ", " + conn.escape(moment(new Date())) + ", " +
                                 conn.escape(req.session.member_email) + ", " + conn.escape(500) + ", " + conn.escape(0) + ");"
                             totalSql += "update member set member_point = " + conn.escape(todoAddMemberPoint) + ", save_point = " + conn.escape(todoAddSavePoint) +
                                 " where member_email = " + conn.escape(req.session.member_email) + ";"
@@ -182,7 +183,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "update idea set idea_title = " + conn.escape(req.body.idea_title) +
                                                             ", idea_contents = " + conn.escape(req.body.idea_contents) + " where idea_id = " + conn.escape(req.body.idea_id)
                                                             + "; insert into idea_log(idea_id, idea_edit_date) values(" + conn.escape(req.body.idea_id) + ", " +
-                                                            conn.escape("NOW()") + ");"
+                                                            conn.escape(moment(new Date())) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -207,7 +208,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "delete from idea_file_dir where idea_id = " + conn.escape(req.body.idea_id) +
                                                             "; update idea set idea_title = " + conn.escape(req.body.idea_title) + ", idea_contents = " + conn.escape(req.body.idea_contents) +
                                                             " where idea_id = " + conn.escape(req.body.idea_id) +
-                                                            "; insert into idea_log(idea_id, idea_edit_date) values(" + conn.escape(req.body.idea_id) + ", " + conn.escape("NOW()") + ");"
+                                                            "; insert into idea_log(idea_id, idea_edit_date) values(" + conn.escape(req.body.idea_id) + ", " + conn.escape(moment(new Date())) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -247,7 +248,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into idea_log(idea_id, idea_edit_date) values(" + conn.escape(req.body.idea_id)
-                                                            + ", " + conn.escape("NOW()") + ");"
+                                                            + ", " + conn.escape(moment(new Date())) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -278,7 +279,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into idea_log(idea_id, idea_edit_date) values(" + conn.escape(req.body.idea_id) +
-                                                            ", " + conn.escape("NOW()") + ");"
+                                                            ", " + conn.escape(moment(new Date())) + ");"
 
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -318,7 +319,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "update idea set idea_title = " + conn.escape(req.body.idea_title) +
                                                             ", idea_contents = " + conn.escape(req.body.idea_contents) +
                                                             " where idea_id = " + conn.escape(req.body.idea_id)
-                                                            + "; update idea_log set idea_edit_date = " + conn.escape("NOW()")
+                                                            + "; update idea_log set idea_edit_date = " + conn.escape(moment(new Date()))
                                                             + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -344,7 +345,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "delete from idea_file_dir where idea_id = " + conn.escape(req.body.idea_id) +
                                                             "; update idea set idea_title = " + conn.escape(req.body.idea_title) + ", idea_contents = " + conn.escape(req.body.idea_contents) +
                                                             " where idea_id = " + conn.escape(req.body.idea_id) +
-                                                            "; update idea_log set idea_edit_date = " + conn.escape("NOW()")
+                                                            "; update idea_log set idea_edit_date = " + conn.escape(moment(new Date()))
                                                             + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -384,7 +385,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into idea_file_dir(idea_id, idea_file_name, idea_file_path) values(" + conn.escape(req.body.idea_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update idea_log set idea_edit_date = " + conn.escape("NOW()")
+                                                        editTotalSql += "update idea_log set idea_edit_date = " + conn.escape(moment(new Date()))
                                                             + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -417,7 +418,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into idea_file_dir(idea_id, idea_file_name, idea_file_path) values(" + conn.escape(req.body.idea_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update idea_log set idea_edit_date = " + conn.escape("NOW()")
+                                                        editTotalSql += "update idea_log set idea_edit_date = " + conn.escape(moment(new Date()))
                                                             + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
 
                                                         conn.query(editTotalSql, function (error) {

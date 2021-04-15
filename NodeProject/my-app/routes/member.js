@@ -12,6 +12,7 @@ const sessionConfig = require("../config/session_config.js")
 const func = require("../common/function.js")
 const getConnection = require("../config/database_config.js").getConnection
 const logger = require("../config/winston_config.js").logger
+const moment = require("moment")
 app.use(sessionConfig.init())
 
 /**
@@ -60,8 +61,9 @@ app.post("/email", (req, res) => {
                     if (memberCheckValue === 200) {
                         func.generateAuthKey().then(authKey => {
                             urlAuthEmail += authKey
+                            let tomorrow = moment(new Date().setDate(new Date().getDate() + 1))
                             let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
-                                + conn.escape(0) + conn.escape("DATE_ADD(NOW(), INTERVAL 1 DAY)") + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + conn.escape(req.cookies.chosen_agree) +");"
+                                + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + conn.escape(req.cookies.chosen_agree) +");"
                             getConnection((conn) => {
                                 conn.query(insertEmailAuth, function (error) {
                                     if (error) {
@@ -108,8 +110,10 @@ app.post("/email", (req, res) => {
                         else {
                             func.generateAuthKey().then(authKey => {
                                 urlAuthEmail += authKey
+                                let tomorrow = new Date().setDate(new Date().getDate() + 1)
+                                tomorrow = moment(tomorrow)
                                 let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
-                                    + conn.escape(0) + conn.escape("DATE_ADD(NOW(), INTERVAL 1 DAY)") + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + conn.escape(req.cookies.chosen_agree) +");"
+                                    + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + conn.escape(req.cookies.chosen_agree) +");"
                                 conn.query(insertEmailAuth, function (error, rows) {
                                     if (error) {
                                         console.error(error)
@@ -333,7 +337,7 @@ app.post("/signup", (req, res) => {
 
                                                 // log 추가.
                                                 let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
-                                                let today = "NOW()"
+                                                let today = moment(new Date())
                                                 let memberLogInsertParam = [tempEmail, today, today]
                                                 conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
                                                     if (error) {
@@ -398,7 +402,7 @@ app.post("/signup", (req, res) => {
 
                                                 // log 추가.
                                                 let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
-                                                let today = "NOW()"
+                                                let today = moment(new Date())
                                                 let memberLogInsertParam = [newEmail, today, today]
                                                 conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
                                                     if (error) {
@@ -502,7 +506,7 @@ app.post("/login", (req, res) => {
                                     })
 
                                     let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
-                                    let today = "NOW()"
+                                    let today = moment(new Date())
                                     let memberLogParam = [today, rows[0].member_email]
                                     conn.query(memberLogUpdate, memberLogParam, function (error) {
                                         if (error) {
@@ -649,9 +653,9 @@ app.post("/pw/find", (req, res) => {
                         // 정지, 탈퇴 여부 체크
                         if (rows[0].member_ban === 0 && rows[0].member_secede === 0) {
                             func.generateAuthKey().then(key => {
-                                // let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(?, ?, ?, ?, ?)"
+                                let tomorrow = moment(new Date().setDate(new Date().getDate() + 1))
                                 let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values("+ conn.escape(key) + ", " + conn.escape(0) + ", "
-                                    + conn.escape("DATE_ADD(NOW(), INTERVAL 1 DAY)") + ", " + conn.escape(0) + ", " + conn.escape(rows[0].member_email) + ");"
+                                    + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(rows[0].member_email) + ");"
                                 conn.query(insertSql, function (error, rows) {
                                     if (error) {
                                         console.error(error)
