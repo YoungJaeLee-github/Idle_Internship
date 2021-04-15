@@ -231,7 +231,7 @@ async function contentsCrawling(page) {
     })
 }
 
-cron.schedule("00 00 1-31 * *", async function () {
+cron.schedule("03 11 1-31 * *", async function () {
     const browser = await puppeteer.launch({headless: false})
     const page = await browser.newPage()
     await page.setViewport({
@@ -245,7 +245,7 @@ cron.schedule("00 00 1-31 * *", async function () {
     await browser.close()
 })
 
-cron.schedule("01 00 1-31 * *", async function () {
+cron.schedule("04 11 1-31 * *", async function () {
     const browser = await puppeteer.launch({headless: false})
     const page = await browser.newPage()
     await page.setViewport({
