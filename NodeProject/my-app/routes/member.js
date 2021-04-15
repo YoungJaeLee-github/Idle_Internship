@@ -58,7 +58,7 @@ app.post("/email", (req, res) => {
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
-                    let urlAuthEmail = "http://localhost:3000/member/email-check?auth_key="
+                    let urlAuthEmail = "http://152.67.193.89:3000/member/email-check?auth_key="
                     // 최초 가입.
                     if (memberCheckValue === 200) {
                         func.generateAuthKey().then(authKey => {
@@ -667,7 +667,7 @@ app.post("/pw/find", (req, res) => {
                                         console.log("insert query is executed.")
                                 })
 
-                                let urlPassword = "http://localhost:3000/member/pw/reset-redirect?pw_key=" + key
+                                let urlPassword = "http://152.67.193.89:3000/member/pw/reset-redirect?pw_key=" + key
                                 func.sendEmail(isEmail, urlPassword, "[idea platform] Regarding email authentication.").then(mailContents => {
                                     transporter.sendMail(mailContents, function (error, info) {
                                         if (error)
