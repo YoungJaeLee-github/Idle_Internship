@@ -8,6 +8,7 @@ const app = express.Router()
 const getConnection = require("../config/database_config.js").getConnection
 const fs = require("fs")
 const path = require("path")
+const logger = require("../config/winston_config.js").logger
 const sessionConfig = require("../config/session_config.js")
 app.use(sessionConfig.init())
 

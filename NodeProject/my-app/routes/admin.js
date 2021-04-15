@@ -39,7 +39,7 @@ cron.schedule("00 00 * * 1", function () {
         "where rn = ?;"
     let searchPointParam = [1, 1, 1]
     getConnection((conn) => {
-        conn.query(searchPointSql, searchPointParam, function (error, rows, fields) {
+        conn.query(searchPointSql, searchPointParam, function (error, rows) {
             if (error) {
                 logger.error(error)
                 console.error(error)
@@ -71,16 +71,19 @@ cron.schedule("00 00 * * 1", function () {
                     for (let i = 0; i < structForRank.length; i++)
                         structForRank[i].member_rank = i + 1
 
+                    conn.beginTransaction()
                     let updateRankSql = ""
                     for (let i = 0; i < structForRank.length; i++)
                         updateRankSql += "update member set member_rank = " + conn.escape(structForRank[i].member_rank) + " where member_email = " + conn.escape(structForRank[i].member_email) + ";"
                     updateRankSql += "update member set member_rank = " + conn.escape(null) + " where member_ban = " + conn.escape(1) + " or member_secede = " + conn.escape(1) + ";"
 
-                    conn.query(updateRankSql, function (error, rows, fields) {
+                    conn.query(updateRankSql, function (error) {
                         if (error) {
+                            conn.rollback()
                             console.error(error)
                             logger.error(error)
                         } else {
+                            conn.commit()
                             console.log("Success Rank update.")
                             logger.info("Success Rank update.")
                         }
@@ -127,6 +130,7 @@ async function listCrawling(page) {
     await page.goto("https://cse.kangwon.ac.kr/index.php?mp=6_1")
     getAll(page).then(data => {
         getConnection((conn) => {
+            conn.beginTransaction()
             let insertSql = ""
             for (let i = 0; i < data.length; i++) {
                 let bid = data[i].link.split("&")[8].split("=")[1]
@@ -136,9 +140,11 @@ async function listCrawling(page) {
             }
             conn.query(insertSql, function (error) {
                 if (error) {
+                    conn.rollback()
                     console.error(error)
                     logger.error(error)
                 } else {
+                    conn.commit()
                     console.log("Success Crawling.")
                     logger.info("Success Crawling.")
                 }
@@ -159,9 +165,11 @@ async function getCrawlingUrl() {
         getConnection((conn) => {
             conn.query(getLinkSql, getLinkParam, function (error, rows) {
                 if (error) {
+                    logger.error(error)
                     console.error(error)
                 } else {
                     if (rows.length === 0) {
+                        logger.info("Not exists announcement there.")
                         reject("Not exists announcement there.")
                     } else {
                         for (let i = 0; i < rows.length; i++)
@@ -169,6 +177,7 @@ async function getCrawlingUrl() {
                                 link: rows[i].anno_link,
                                 bid: rows[i].anno_flag
                             })
+                        logger.info("Success get crawling url.")
                         resolve(linkList)
                     }
                 }
@@ -213,15 +222,18 @@ async function contentsCrawling(page) {
         }
 
         getConnection((conn) => {
+            conn.beginTransaction()
             let updateSql = ""
             for (let i = 0; i < contents.length; i++)
                 updateSql += "update anno set anno_contents = " + conn.escape(contents[i].htmlData) + " where anno_flag = " + conn.escape(linkList[i].bid) + ";"
 
             conn.query(updateSql, function (error) {
                 if (error) {
+                    conn.rollback()
                     console.error(error)
                     logger.error(error)
                 } else {
+                    conn.commit()
                     console.log("Insert Contents Success.")
                     logger.info("Insert Contents Success.")
                 }
@@ -252,9 +264,9 @@ cron.schedule("00 00 1-31 * *", async function () {
     await browser.close()
     console.log("list Crawling End.")
 }, {
-        scheduled: true,
-        timezone: "Asia/Seoul"
-    })
+    scheduled: true,
+    timezone: "Asia/Seoul"
+})
 
 cron.schedule("01 00 1-31 * *", async function () {
     console.log("Contents Crawling Start.")
@@ -291,15 +303,15 @@ cron.schedule("01 00 1-31 * *", async function () {
 // 1. 사용자 조회
 app.post("/member-check", (req, res) => {
     let checkEmail = req.body.member_email
-    if (checkEmail === undefined)
+    if (checkEmail === undefined) {
         res.status(401).json({
             content: false
         })
-    else {
+    } else {
         let emailCheckSql = "select member_email, member_secede, member_ban from member where member_email = ?;"
         let selectParam = [checkEmail]
         getConnection((conn) => {
-            conn.query(emailCheckSql, selectParam, function (error, rows, fields) {
+            conn.query(emailCheckSql, selectParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -308,15 +320,16 @@ app.post("/member-check", (req, res) => {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let value = func.emailCheck(isEmail)
                     // 중복된 이메일이 없음
-                    if (value === 200)
+                    if (value === 200) {
                         res.status(200).json({content: "empty"})
-                    else if (value === 401 && rows[0].member_secede === 0) {
+                    } else if (value === 401 && rows[0].member_secede === 0) {
                         // 정지되지 않은 회원.(정상적인 회원)
-                        if (rows[0].member_ban === 0)
+                        if (rows[0].member_ban === 0) {
                             res.status(200).json({content: "OK"})
-                        else
+                        } else {
                             // member_ban === 1 정지된 회원
                             res.status(401).json({content: "ban"})
+                        }
                     } else {
                         // 탈퇴한 회원
                         res.status(401).json({content: "secede"})
@@ -331,15 +344,15 @@ app.post("/member-check", (req, res) => {
 // 2. 관리자 조회
 app.post('/check', (req, res) => {
     let adminEmail = req.body.admin_email
-    if (adminEmail === undefined)
+    if (adminEmail === undefined) {
         res.status(401).json({
             content: "Empty Param"
         })
-    else {
+    } else {
         let adminCheckSql = "select admin_email, admin_secede from admin where admin_email = ?;"
         let adminCheckParam = [adminEmail]
         getConnection((conn) => {
-            conn.query(adminCheckSql, adminCheckParam, function (error, rows, fields) {
+            conn.query(adminCheckSql, adminCheckParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -347,18 +360,19 @@ app.post('/check', (req, res) => {
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].admin_email
                     let emailCheckValue = func.emailCheck(isEmail)
-                    if (emailCheckValue === 200)
+                    if (emailCheckValue === 200) {
                         res.status(200).json({
                             content: "No admin email."
                         })
-                    else if (emailCheckValue === 401 && rows[0].admin_secede === 1)
+                    } else if (emailCheckValue === 401 && rows[0].admin_secede === 1) {
                         res.status(200).json({
                             content: "No admin email."
                         })
-                    else
+                    } else {
                         res.status(401).json({
                             content: "Already exists admin email."
                         })
+                    }
                 }
                 conn.release()
             })
@@ -369,11 +383,11 @@ app.post('/check', (req, res) => {
 // 3. 관리자 등록
 app.post("/signup", (req, res) => {
     if (req.body.admin_email === undefined || req.body.admin_name === undefined || req.body.admin_sex === undefined ||
-        req.body.admin_birth === undefined || req.body.admin_state === undefined || req.body.admin_pw === undefined || req.body.admin_phone === undefined)
+        req.body.admin_birth === undefined || req.body.admin_state === undefined || req.body.admin_pw === undefined || req.body.admin_phone === undefined) {
         res.status(401).json({
             content: false
         })
-    else {
+    } else {
         let adminEmail = req.body.admin_email
         let adminName = req.body.admin_name
         let adminSex = req.body.admin_sex
@@ -384,9 +398,9 @@ app.post("/signup", (req, res) => {
         let searchEmailSql = "select admin_email, admin_secede from admin where admin_email = ?;"
         let searchEmailParam = [adminEmail]
         let insertLogSql = "insert into admin_log(admin_email, admin_log_join, admin_login_lately) values(?, ?, ?);"
-        let insertLogParam = [adminEmail, new Date(), new Date()]
+        let insertLogParam = [adminEmail, new Date().toLocaleString(), new Date().toLocaleString()]
         getConnection((conn) => {
-            conn.query(searchEmailSql, searchEmailParam, function (error, rows, fields) {
+            conn.query(searchEmailSql, searchEmailParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
@@ -400,10 +414,12 @@ app.post("/signup", (req, res) => {
                             crypto.encryption(adminPhone).then(encryptedPhone => {
                                 // 최초 등록
                                 if (emailCheckValue === 200) {
+                                    conn.beginTransaction()
                                     let signupSql = "insert into admin(admin_email, admin_name, admin_sex, admin_birth, admin_state, admin_pw, admin_phone, admin_secede, admin_salt) values(?, ?, ?, ?, ?, ?, ?, ?, ?);"
                                     let signupParam = [adminEmail, adminName, adminSex, adminBirth, adminState, encryptedPw, encryptedPhone, 0, salt]
-                                    conn.query(signupSql, signupParam, function (error, rows, fields) {
+                                    conn.query(signupSql, signupParam, function (error) {
                                         if (error) {
+                                            conn.rollback()
                                             console.error(error)
                                             res.status(500).json({
                                                 content: "DB Error"
@@ -413,37 +429,45 @@ app.post("/signup", (req, res) => {
                                             req.session.admin_email = adminEmail
                                             req.session.admin_pw = encryptedPw
                                             req.session.save(function (error) {
-                                                if (error)
+                                                if (error) {
+                                                    conn.rollback()
                                                     res.status(500).json({
                                                         content: "Session Error"
                                                     })
-                                                else
+                                                } else {
+                                                    conn.commit()
                                                     // TODO 메인 페이지로 redirect
                                                     res.status(200).json({
                                                         content: true
                                                     })
+                                                }
                                             })
                                         }
                                     })
 
                                     // log
-                                    conn.query(insertLogSql, insertLogParam, function (error, rows, fields) {
+                                    conn.beginTransaction()
+                                    conn.query(insertLogSql, insertLogParam, function (error) {
                                         if (error) {
+                                            conn.rollback()
                                             console.error(error)
                                             res.status(500).json({
                                                 content: "DB Error"
                                             })
                                         } else {
+                                            conn.commit()
                                             console.log("insert log success.")
                                         }
                                     })
                                 } else {
                                     // 재등록.
                                     if (rows[0].admin_secede === 1) {
+                                        conn.beginTransaction()
                                         let updateSignupSql = "update admin set admin_name = ?, admin_sex = ?, admin_birth = ?, admin_state = ?, admin_pw = ?, admin_phone = ?, admin_secede = ?, admin_salt = ? where admin_email = ?;"
                                         let updateSignupParam = [adminName, adminSex, adminBirth, adminState, encryptedPw, encryptedPhone, 0, salt, adminEmail]
-                                        conn.query(updateSignupSql, updateSignupParam, function (error, rows, fields) {
+                                        conn.query(updateSignupSql, updateSignupParam, function (error) {
                                             if (error) {
+                                                conn.rollback()
                                                 res.status(500).json({
                                                     content: "DB Error"
                                                 })
@@ -452,21 +476,24 @@ app.post("/signup", (req, res) => {
                                                 req.session.admin_email = adminEmail
                                                 req.session.admin_pw = encryptedPw
                                                 req.session.save(function (error) {
-                                                    if (error)
+                                                    if (error) {
+                                                        conn.rollback()
                                                         res.status(500).json({
                                                             content: "Session Error"
                                                         })
-                                                    else
+                                                    } else {
                                                         // TODO 메인 페이지로 redirect
+                                                        conn.commit()
                                                         res.status(200).json({
                                                             content: true
                                                         })
+                                                    }
                                                 })
                                             }
                                         })
 
                                         // log
-                                        conn.query(insertLogSql, insertLogParam, function (error, rows, fields) {
+                                        conn.query(insertLogSql, insertLogParam, function (error) {
                                             if (error) {
                                                 console.error(error)
                                                 res.status(500).json({
@@ -501,17 +528,17 @@ app.post("/signup", (req, res) => {
 
 // 4. 관리자 로그인
 app.post("/login", (req, res) => {
-    if (req.body.admin_email === undefined || req.body.admin_pw === undefined)
+    if (req.body.admin_email === undefined || req.body.admin_pw === undefined) {
         res.status(401).json({
             content: false
         })
-    else {
+    } else {
         let adminEmail = req.body.admin_email
         let adminPw = req.body.admin_pw
         let searchEmailSql = "select admin_email, admin_secede, admin_salt, admin_pw from admin where admin_email = ?;"
         let searchEmailParam = [adminEmail]
         getConnection((conn) => {
-            conn.query(searchEmailSql, searchEmailParam, function (error, rows, fields) {
+            conn.query(searchEmailSql, searchEmailParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
@@ -519,16 +546,17 @@ app.post("/login", (req, res) => {
                     })
                 } else {
                     let emailCheckValue = func.emailCheck(rows.length === 0 ? null : rows[0].admin_email)
-                    if (emailCheckValue === 200)
+                    if (emailCheckValue === 200) {
                         res.status(401).json({
                             content: "Wrong Email"
                         })
-                    else {
+                    } else {
                         // 탈퇴한 관리자.
-                        if (rows[0].admin_secede === 1)
+                        if (rows[0].admin_secede === 1) {
                             res.status(401).json({
                                 content: "secede admin"
                             })
+                        }
                         // 정상적인 관리자.
                         else {
                             crypto.encryptByHash(adminPw, rows[0].admin_salt).then(encryptedPw => {
@@ -536,19 +564,21 @@ app.post("/login", (req, res) => {
                                     req.session.admin_email = adminEmail
                                     req.session.admin_pw = encryptedPw
                                     req.session.save(function (error) {
-                                        if (error)
+                                        if (error) {
                                             res.status(500).json({
                                                 content: "Session Error"
                                             })
-                                        else
+                                        } else {
                                             // TODO 메인페이지로
                                             res.status(200).json({
-                                                "content": "Login"
+                                                content: "Login"
                                             })
+                                        }
                                     })
+                                    conn.beginTransaction()
                                     let updateLogSql = "update admin_log set admin_login_lately = ? where admin_email = ?;"
-                                    let updateLogParam = [new Date(), adminEmail]
-                                    conn.query(updateLogSql, updateLogParam, function (error, rows, fields) {
+                                    let updateLogParam = [new Date().toLocaleString().toLocaleString(), adminEmail]
+                                    conn.query(updateLogSql, updateLogParam, function (error) {
                                         if (error) {
                                             console.error(error)
                                             res.status(500).json({
@@ -580,74 +610,76 @@ app.post("/logout", (req, res) => {
     req.session.destroy()
     // TODO 로그인 페이지로
     res.status(200).json({
-        "content": "Logout"
+        content: "Logout"
     })
 })
 
 // 6. 관리자 제외
 app.delete("/secede", (req, res) => {
     let rootEmail = req.session.admin_email
-    if (rootEmail === undefined || req.body.secede_email === undefined || req.body.root_pw === undefined)
+    if (rootEmail === undefined || req.body.secede_email === undefined || req.body.root_pw === undefined) {
         res.status(401).json({
-            "content": "Wrong access."
+            content: "Wrong access."
         })
-    else {
+    } else {
         let secedeEmail = req.body.secede_email
         let rootPw = req.body.root_pw
         let searchEmailSql = "select admin_email, admin_secede from admin where admin_email = ?;"
         let searchEmailParam = [secedeEmail]
         getConnection((conn) => {
-            conn.query(searchEmailSql, searchEmailParam, function (error, rows, fields) {
+            conn.query(searchEmailSql, searchEmailParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
-                        "content": "DB Error"
+                        content: "DB Error"
                     })
                 } else {
                     let emailCheckValue = func.emailCheck(rows.length === 0 ? null : rows[0].admin_email)
-                    if (emailCheckValue === 200)
+                    if (emailCheckValue === 200) {
                         res.status(401).json({
-                            "content": false
+                            content: false
                         })
-                    else {
-                        if (rows[0].admin_secede === 1)
+                    } else {
+                        if (rows[0].admin_secede === 1) {
                             res.status(401).json({
-                                "content": false
+                                content: false
                             })
-                        else {
+                        } else {
                             let searchSaltSql = "select admin_salt from admin where admin_email = ?;"
                             let searchSaltParam = [rootEmail]
-                            conn.query(searchSaltSql, searchSaltParam, function (error, rows, fields) {
+                            conn.query(searchSaltSql, searchSaltParam, function (error, rows) {
                                 if (error) {
                                     console.error(error)
                                     res.status(500).json({
-                                        "content": "DB Error"
+                                        content: "DB Error"
                                     })
                                 } else {
-                                    if (rows.length === 0)
+                                    if (rows.length === 0) {
                                         res.status(401).json({
-                                            "content": false
+                                            content: false
                                         })
-                                    else {
+                                    } else {
                                         crypto.encryptByHash(rootPw, rows[0].admin_salt).then(encryptedPw => {
                                             if (encryptedPw === req.session.admin_pw) {
                                                 let updateSecedeSql = "update admin set admin_secede = ? where admin_email = ?;"
                                                 let updateSecedeParam = [1, secedeEmail]
-                                                conn.query(updateSecedeSql, updateSecedeParam, function (error, rows, fields) {
+                                                conn.query(updateSecedeSql, updateSecedeParam, function (error) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
-                                                    } else
+                                                    } else {
                                                         res.status(200).json({
-                                                            "content": true
+                                                            content: true
                                                         })
+                                                    }
                                                 })
-                                            } else
+                                            } else {
                                                 res.status(401).json({
-                                                    "content": false
+                                                    content: false
                                                 })
+                                            }
                                         }).catch(error => {
                                             console.error(error)
                                         })
@@ -666,72 +698,72 @@ app.delete("/secede", (req, res) => {
 // 7. 사용자 정지
 app.patch("/member-ban", (req, res) => {
     let adminEmail = req.session.admin_email
-    if (adminEmail === undefined || req.body.member_email === undefined || req.body.member_ban_reason === undefined || req.body.admin_pw === undefined)
+    if (adminEmail === undefined || req.body.member_email === undefined || req.body.member_ban_reason === undefined || req.body.admin_pw === undefined) {
         res.status(401).json({
-            "content": false
+            content: false
         })
-    else {
+    } else {
         let todoBanMemberEmail = req.body.member_email
         let banReason = req.body.member_ban_reason
         let adminPw = req.body.admin_pw
         let searchEmailSql = "select member_email, member_secede, member_ban from member where member_email = ?;"
         let searchEmailParam = [todoBanMemberEmail]
         getConnection((conn) => {
-            conn.query(searchEmailSql, searchEmailParam, function (error, rows, fields) {
+            conn.query(searchEmailSql, searchEmailParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
-                        "content": "DB Error"
+                        content: "DB Error"
                     })
                 } else {
                     let emailCheckValue = func.emailCheck(rows.length === 0 ? null : rows[0].member_email)
-                    if (emailCheckValue === 200)
+                    if (emailCheckValue === 200) {
                         res.status(401).json({
-                            "content": false
+                            content: false
                         })
-                    else {
-                        if (rows[0].member_secede === 1 || rows[0].member_ban === 1)
+                    } else {
+                        if (rows[0].member_secede === 1 || rows[0].member_ban === 1) {
                             res.status(401).json({
-                                "content": false
+                                content: false
                             })
-                        else {
+                        } else {
                             let searchSaltSql = "select admin_salt from admin where admin_email = ?;"
                             let searchSaltParam = [adminEmail]
-                            conn.query(searchSaltSql, searchSaltParam, function (error, rows, fields) {
+                            conn.query(searchSaltSql, searchSaltParam, function (error, rows) {
                                 if (error) {
                                     console.error(error)
                                     res.status(500).json({
-                                        "content": "DB Error"
+                                        content: "DB Error"
                                     })
                                 } else {
-                                    if (rows.length === 0)
+                                    if (rows.length === 0) {
                                         res.status(401).json({
-                                            "content": false
+                                            content: false
                                         })
-                                    else {
+                                    } else {
                                         crypto.encryptByHash(adminPw, rows[0].admin_salt).then(encryptedPw => {
                                             if (encryptedPw === req.session.admin_pw) {
                                                 let searchBanEmailSql = "select member_email from member_ban where member_email = ?"
                                                 let searchBanEmailParam = [todoBanMemberEmail]
                                                 let updateBanSql = "update member set member_ban = ? where member_email = ?"
                                                 let updateBanParam = [1, todoBanMemberEmail]
-                                                conn.query(searchBanEmailSql, searchBanEmailParam, function (error, rows, fields) {
+                                                conn.query(searchBanEmailSql, searchBanEmailParam, function (error, rows) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
                                                     } else {
                                                         let emailCheckValue = func.emailCheck(rows.length === 0 ? null : rows[0].member_email)
                                                         // 처음 정지 될 때
                                                         if (emailCheckValue === 200) {
                                                             let insertBanSql = "insert into member_ban(member_email, member_ban_reason, member_ban_date, admin_email) values(?, ? ,?, ?);"
-                                                            let insertBanParam = [todoBanMemberEmail, banReason, new Date(), adminEmail]
-                                                            conn.query(insertBanSql, insertBanParam, function (error, rows, fields) {
+                                                            let insertBanParam = [todoBanMemberEmail, banReason, new Date().toLocaleString(), adminEmail]
+                                                            conn.query(insertBanSql, insertBanParam, function (error) {
                                                                 if (error) {
                                                                     console.error(error)
                                                                     res.status(500).json({
-                                                                        "content": "DB Error"
+                                                                        content: "DB Error"
                                                                     })
                                                                 } else {
                                                                     console.log("insert ban success.")
@@ -740,12 +772,12 @@ app.patch("/member-ban", (req, res) => {
                                                         } else {
                                                             // 정지 해제 후 다시 정지 될 때
                                                             let updateReBanSql = "update member_ban set member_ban_reason = ?, member_ban_date = ?, admin_email = ? where member_email = ?;"
-                                                            let updateReBanParam = [banReason, new Date(), adminEmail, todoBanMemberEmail]
-                                                            conn.query(updateReBanSql, updateReBanParam, function (error, rows, fields) {
+                                                            let updateReBanParam = [banReason, new Date().toLocaleString(), adminEmail, todoBanMemberEmail]
+                                                            conn.query(updateReBanSql, updateReBanParam, function (error) {
                                                                 if (error) {
                                                                     console.error(error)
                                                                     res.status(500).json({
-                                                                        "content": "DB Error"
+                                                                        content: "DB Error"
                                                                     })
                                                                 } else {
                                                                     console.log("update ban success.")
@@ -755,22 +787,23 @@ app.patch("/member-ban", (req, res) => {
                                                     }
                                                 })
 
-                                                conn.query(updateBanSql, updateBanParam, function (error, rows, fields) {
+                                                conn.query(updateBanSql, updateBanParam, function (error) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
                                                     } else {
                                                         res.status(200).json({
-                                                            "content": true
+                                                            content: true
                                                         })
                                                     }
                                                 })
-                                            } else
+                                            } else {
                                                 res.status(401).json({
-                                                    "content": false
+                                                    content: false
                                                 })
+                                            }
                                         }).catch(error => {
                                             console.error(error)
                                         })
@@ -789,81 +822,86 @@ app.patch("/member-ban", (req, res) => {
 // 8. 사용자 정지 해제
 app.patch("/member-ban-release", (req, res) => {
     let adminEmail = req.session.admin_email
-    if (adminEmail === undefined || req.body.member_email === undefined || req.body.member_ban_reason === undefined || req.body.admin_pw === undefined)
+    if (adminEmail === undefined || req.body.member_email === undefined || req.body.member_ban_reason === undefined || req.body.admin_pw === undefined) {
         res.status(401).json({
-            "content": false
+            content: false
         })
-    else {
+    } else {
         let todoReleaseEmail = req.body.member_email
         let releaseReason = req.body.member_ban_reason
         let adminPw = req.body.admin_pw
         let searchEmailSql = "select member_email, member_secede, member_ban from member where member_email = ?;"
         let searchEmailParam = [todoReleaseEmail]
         getConnection((conn) => {
-            conn.query(searchEmailSql, searchEmailParam, function (error, rows, fields) {
+            conn.query(searchEmailSql, searchEmailParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
-                        "content": "DB Error"
+                        content: "DB Error"
                     })
                 } else {
                     let emailCheckValue = func.emailCheck(rows.length === 0 ? null : rows[0].member_email)
-                    if (emailCheckValue === 200)
+                    if (emailCheckValue === 200) {
                         res.status(401).json({
-                            "content": false
+                            content: false
                         })
-                    else {
-                        if (rows[0].member_secede === 1 || rows[0].member_ban === 0)
+                    } else {
+                        if (rows[0].member_secede === 1 || rows[0].member_ban === 0) {
                             res.status(401).json({
-                                "content": false
+                                content: false
                             })
+                        }
                         else {
                             let searchSaltSql = "select admin_salt from admin where admin_email = ?;"
                             let searchSaltParam = [adminEmail]
-                            conn.query(searchSaltSql, searchSaltParam, function (error, rows, fields) {
+                            conn.query(searchSaltSql, searchSaltParam, function (error, rows) {
                                 if (error) {
                                     console.error(error)
                                     res.status(500).json({
-                                        "content": "DB Error"
+                                        content: "DB Error"
                                     })
                                 } else {
-                                    if (rows.length === 0)
+                                    if (rows.length === 0) {
                                         res.status(401).json({
-                                            "content": false
+                                            content: false
                                         })
+                                    }
                                     else {
                                         crypto.encryptByHash(adminPw, rows[0].admin_salt).then(encryptedPw => {
                                             if (encryptedPw === req.session.admin_pw) {
                                                 let updateBanLogSql = "update member_ban set member_ban_reason = ?, member_ban_date = ?, admin_email = ? where member_email = ?;"
-                                                let updateBanLogParam = [releaseReason, new Date(), adminEmail, todoReleaseEmail]
+                                                let updateBanLogParam = [releaseReason, new Date().toLocaleString(), adminEmail, todoReleaseEmail]
                                                 let updateBanSql = "update member set member_ban = ? where member_email = ?"
                                                 let updateBanParam = [0, todoReleaseEmail]
 
-                                                conn.query(updateBanLogSql, updateBanLogParam, function (error, rows, fields) {
+                                                conn.query(updateBanLogSql, updateBanLogParam, function (error) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
-                                                    } else
+                                                    } else {
                                                         console.log("Release Ban Success.")
+                                                    }
                                                 })
 
-                                                conn.query(updateBanSql, updateBanParam, function (error, rows, fields) {
+                                                conn.query(updateBanSql, updateBanParam, function (error) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
-                                                    } else
+                                                    } else {
                                                         res.status(200).json({
-                                                            "content": true
+                                                            content: true
                                                         })
+                                                    }
                                                 })
-                                            } else
+                                            } else {
                                                 res.status(401).json({
-                                                    "content": false
+                                                    content: false
                                                 })
+                                            }
                                         }).catch(error => {
                                             console.error(error)
                                         })
@@ -881,10 +919,11 @@ app.patch("/member-ban-release", (req, res) => {
 
 // 9. 아이디어 삭제
 app.delete("/idea/remove", (req, res) => {
-    if (req.body.idea_id === undefined || req.session.admin_email === undefined)
+    if (req.body.idea_id === undefined || req.session.admin_email === undefined) {
         res.status(401).json({
-            "content": false
+            content: false
         })
+    }
     else {
         let searchIdeaSql = "select idea_delete, add_point from idea where idea_id = ?;"
         let searchIdeaParam = [req.body.idea_id]
@@ -893,18 +932,20 @@ app.delete("/idea/remove", (req, res) => {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
-                        "content": "DB Error"
+                        content: "DB Error"
                     })
                 } else {
-                    if (rows.length === 0)
+                    if (rows.length === 0) {
                         res.status(401).json({
-                            "content": false
+                            content: false
                         })
+                    }
                     else {
-                        if (rows[0].idea_delete === 1)
+                        if (rows[0].idea_delete === 1) {
                             res.status(401).json({
-                                "content": false
+                                content: false
                             })
+                        }
                         else {
                             let originalPoint = rows[0].add_point
                             if (originalPoint === null) {
@@ -937,7 +978,7 @@ app.delete("/idea/remove", (req, res) => {
                                                 let totalSql = "update idea set idea_delete = " + conn.escape(1) + ", admin_email = " +
                                                     conn.escape(req.session.admin_email) + " where idea_id = " + conn.escape(req.body.idea_id) + ";"
                                                 totalSql += " insert into point(member_email, use_date, use_contents, point) values(" +
-                                                    conn.escape(memberEmail) + ", " + conn.escape(new Date()) + ", " + conn.escape("아이디어 삭제") + ", " +
+                                                    conn.escape(memberEmail) + ", " + conn.escape(new Date().toLocaleString()) + ", " + conn.escape("아이디어 삭제") + ", " +
                                                     conn.escape(originalPoint) + ");"
                                                 totalSql += " update member set member_point = " + conn.escape(todoAddMemberPoint) + ", save_point = " +
                                                     conn.escape(todoAddSavePoint) + " where member_email = " + conn.escape(memberEmail) + ";"
@@ -945,12 +986,12 @@ app.delete("/idea/remove", (req, res) => {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
                                                     } else {
                                                         console.log("success remove idea.")
                                                         res.status(200).json({
-                                                            "content": true
+                                                            content: true
                                                         })
                                                     }
                                                 })
@@ -972,7 +1013,7 @@ app.delete("/idea/remove", (req, res) => {
 app.patch("/point/give", (req, res) => {
     if (req.session.admin_email === undefined || req.body.idea_id === undefined || req.body.add_point === undefined)
         res.status(401).json({
-            "content": false
+            content: false
         })
     else {
         let ideaId = req.body.idea_id
@@ -980,50 +1021,50 @@ app.patch("/point/give", (req, res) => {
         let searchIdeaSql = "select idea_id, idea_delete, add_point from idea where idea_id = ?"
         let searchIdeaParam = [ideaId]
         getConnection((conn) => {
-            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows, fields) {
+            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
-                        "content": "DB Error"
+                        content: "DB Error"
                     })
                 } else {
                     if (rows.length === 0)
                         res.status(401).json({
-                            "content": false
+                            content: false
                         })
                     else {
                         if (rows[0].idea_delete === 1)
                             res.status(401).json({
-                                "content": false
+                                content: false
                             })
                         else {
                             let originalPoint = rows[0].add_point
                             let selectPointSql = "select save_point, use_point, member_ban, member_secede from member where member_email = (select member_email from idea where idea_id = ?)"
                             let selectPointParam = [ideaId]
-                            conn.query(selectPointSql, selectPointParam, function (error, rows, fields) {
+                            conn.query(selectPointSql, selectPointParam, function (error, rows) {
                                 if (error) {
                                     console.error(error)
                                     res.status(500).json({
-                                        "content": "DB Error"
+                                        content: "DB Error"
                                     })
                                 } else {
                                     if (rows.length === 0)
                                         res.status(401).json({
-                                            "content": false
+                                            content: false
                                         })
                                     else {
                                         if (rows[0].member_secede === 1 || rows[0].member_ban === 1)
                                             res.status(401).json({
-                                                "content": false
+                                                content: false
                                             })
                                         else {
                                             let updateIdeaPointSql = "update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?"
-                                            let updateIdeaPointParam = [req.session.admin_email, givePoint + originalPoint, new Date(), ideaId]
-                                            conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows, fields) {
+                                            let updateIdeaPointParam = [req.session.admin_email, givePoint + originalPoint, new Date().toLocaleString(), ideaId]
+                                            conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows) {
                                                 if (error) {
                                                     console.error(error)
                                                     res.status(500).json({
-                                                        "content": "DB Error"
+                                                        content: "DB Error"
                                                     })
                                                 } else
                                                     console.log("Success give point.")
@@ -1033,16 +1074,16 @@ app.patch("/point/give", (req, res) => {
                                             let todoAddSavePoint = rows[0].save_point + givePoint
                                             let todoAddMemberPoint = todoAddSavePoint - rows[0].use_point
                                             let updatePointParam = [todoAddMemberPoint, todoAddSavePoint, ideaId]
-                                            conn.query(updatePointSql, updatePointParam, function (error, rows, fields) {
+                                            conn.query(updatePointSql, updatePointParam, function (error, rows) {
                                                 if (error) {
                                                     console.error(error)
                                                     res.status(500).json({
-                                                        "content": "DB Error"
+                                                        content: "DB Error"
                                                     })
                                                 } else {
                                                     console.log("Success update member point")
                                                     res.status(200).json({
-                                                        "content": true
+                                                        content: true
                                                     })
                                                 }
                                             })
@@ -1064,74 +1105,74 @@ app.patch("/point/cancel", (req, res) => {
     //idea 테이블 에서 idea id 조회 후 관리자 이메일, 얻은 포인트, 변동일자 업데이트.
     if (req.session.admin_email === undefined || req.body.idea_id === undefined || req.body.cancel_point === undefined)
         res.status(401).json({
-            "content": false
+            content: false
         })
     else {
         let ideaId = req.body.idea_id
         let searchIdeaSql = "select idea_id, idea_delete, add_point from idea where idea_id = ?;"
         let searchIdeaParam = [ideaId]
         getConnection((conn) => {
-            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows, fields) {
+            conn.query(searchIdeaSql, searchIdeaParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
-                        "content": "DB Error"
+                        content: "DB Error"
                     })
                 } else {
                     if (rows.length === 0)
                         res.status(401).json({
-                            "content": false
+                            content: false
                         })
                     else {
                         if (rows[0].idea_delete === 1)
                             res.status(401).json({
-                                "content": false
+                                content: false
                             })
                         else {
                             let originalPoint = rows[0].add_point
                             let searchMemberPointSql = "select save_point, use_point, member_ban, member_secede from member where member_email = (select member_email from idea where idea_id = ?);"
                             let searchMemberPointParam = [ideaId]
-                            conn.query(searchMemberPointSql, searchMemberPointParam, function (error, rows, fields) {
+                            conn.query(searchMemberPointSql, searchMemberPointParam, function (error, rows) {
                                 if (error) {
                                     console.error(error)
                                     res.status(500).json({
-                                        "content": "DB Error"
+                                        content: "DB Error"
                                     })
                                 } else {
                                     if (rows[0].length === 0)
                                         res.status(401).json({
-                                            "content": false
+                                            content: false
                                         })
                                     else {
                                         if (rows[0].member_ban === 1 || rows[0].member_secede === 1)
                                             res.status(401).json({
-                                                "content": false
+                                                content: false
                                             })
                                         else {
                                             if (originalPoint === null || originalPoint === 0)
                                                 res.status(401).json({
-                                                    "content": false
+                                                    content: false
                                                 })
                                             else {
                                                 let updateIdeaPointSql = "update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?;"
-                                                let updateIdeaPointParam = [req.session.admin_email, originalPoint - req.body.cancel_point, new Date(), ideaId]
-                                                conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows, fields) {
+                                                let updateIdeaPointParam = [req.session.admin_email, originalPoint - req.body.cancel_point, new Date().toLocaleString(), ideaId]
+                                                conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
                                                     } else
                                                         console.log("Success update idea point.")
                                                 })
                                                 // point 테이블 insert.
                                                 let insertPointSql = "insert into point (member_email, use_date, use_contents, point) values((select member_email from idea where idea_id = ?), ?, ?, ?);"
-                                                let insertPointParam = [ideaId, new Date(), "회수", req.body.cancel_point]
-                                                conn.query(insertPointSql, insertPointParam, function (error, rows, fields) {
+                                                let insertPointParam = [ideaId, new Date().toLocaleString(), "회수", req.body.cancel_point]
+                                                conn.query(insertPointSql, insertPointParam, function (error, rows) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
                                                     } else {
                                                         console.log("Success Insert point.")
@@ -1142,16 +1183,16 @@ app.patch("/point/cancel", (req, res) => {
                                                 let todoAddSavePoint = rows[0].save_point - req.body.cancel_point
                                                 let todoAddMemberPoint = todoAddSavePoint - rows[0].use_point
                                                 let updateMemberPointParam = [todoAddMemberPoint, todoAddSavePoint, ideaId]
-                                                conn.query(updateMemberPointSql, updateMemberPointParam, function (error, rows, fields) {
+                                                conn.query(updateMemberPointSql, updateMemberPointParam, function (error, rows) {
                                                     if (error) {
                                                         console.error(error)
                                                         res.status(500).json({
-                                                            "content": "DB Error"
+                                                            content: "DB Error"
                                                         })
                                                     } else {
                                                         console.log(("Success update member point."))
                                                         res.status(200).json({
-                                                            "content": true
+                                                            content: true
                                                         })
                                                     }
                                                 })
@@ -1173,28 +1214,28 @@ app.patch("/point/cancel", (req, res) => {
 app.post("/point/check", (req, res) => {
     if (req.session.admin_email === undefined || req.body.member_email === undefined)
         res.status(401).json({
-            "content": false
+            content: false
         })
     else {
         let memberEmail = req.body.member_email
         let searchPointSql = "select member_point, save_point, use_point, member_ban, member_secede from member where member_email = ?"
         let searchPointParam = [memberEmail]
         getConnection((conn) => {
-            conn.query(searchPointSql, searchPointParam, function (error, rows, fields) {
+            conn.query(searchPointSql, searchPointParam, function (error, rows) {
                 if (error) {
                     console.error(error)
                     res.status(500).json({
-                        "content": "DB Error"
+                        content: "DB Error"
                     })
                 } else {
                     if (rows.length === 0)
                         res.status(401).json({
-                            "content": false
+                            content: false
                         })
                     else {
                         if (rows[0].member_secede === 1 || rows[0].member_ban === 1)
                             res.status(401).json({
-                                "content": false
+                                content: false
                             })
                         else {
                             let responseData = rows[0]
@@ -1222,7 +1263,7 @@ app.post("/notice/regist", upload.any(), (req, res) => {
     } else {
         getConnection((conn) => {
             let insertNoticeSql = "insert into notice(notice_title, notice_contents, notice_date, admin_email, notice_delete) values(" + conn.escape(req.body.notice_title)
-                + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
+                + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(new Date().toLocaleString()) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
             conn.query(insertNoticeSql, function (error) {
                 if (error) {
                     for (let i = 0; i < req.files.length; i++) {
@@ -1339,7 +1380,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title) +
                                                             ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
                                                             + "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " +
-                                                            conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ");"
+                                                            conn.escape(new Date().toLocaleString()) + ", " + conn.escape(req.session.admin_email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -1364,7 +1405,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) +
                                                             "; update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " + conn.escape(req.body.notice_contents) +
                                                             " where notice_id = " + conn.escape(req.body.notice_id) +
-                                                            "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " + conn.escape(new Date()) +
+                                                            "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " + conn.escape(new Date().toLocaleString()) +
                                                             ", " + conn.escape(req.session.admin_email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1404,7 +1445,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id)
-                                                            + ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.email) + ");"
+                                                            + ", " + conn.escape(new Date().toLocaleString()) + ", " + conn.escape(req.session.email) + ");"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
                                                                 for (let i = 0; i < req.files.length; i++) {
@@ -1436,7 +1477,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
                                                         editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) +
-                                                            ", " + conn.escape(new Date()) + ", " + conn.escape(req.session.admin_email) + ");"
+                                                            ", " + conn.escape(new Date().toLocaleString()) + ", " + conn.escape(req.session.admin_email) + ");"
 
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1475,7 +1516,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         // 업로드할 파일도 없고, 기존에 파일이 없는 경우
                                                         let editTotalSql = "update notice set notice_title = " + conn.escape(req.body.notice_title) +
                                                             ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
-                                                            + "; update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            + "; update notice_log set notice_edit_date = " + conn.escape(new Date().toLocaleString()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1501,7 +1542,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         let editTotalSql = "delete from notice_file_dir where notice_id = " + conn.escape(req.body.notice_id) +
                                                             "; update notice set notice_title = " + conn.escape(req.body.notice_title) + ", notice_contents = " + conn.escape(req.body.notice_contents) +
                                                             " where notice_id = " + conn.escape(req.body.notice_id) +
-                                                            "; update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                            "; update notice_log set notice_edit_date = " + conn.escape(new Date().toLocaleString()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1540,7 +1581,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(new Date().toLocaleString()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
@@ -1572,7 +1613,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             editTotalSql += "insert into notice_file_dir(notice_id, notice_file_name, notice_file_path) values(" + conn.escape(req.body.notice_id) +
                                                                 ", " + conn.escape(req.files[i].originalname) + ", " + conn.escape(req.files[i].path) + ");"
                                                         }
-                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(new Date()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
+                                                        editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(new Date().toLocaleString()) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
 
                                                         conn.query(editTotalSql, function (error) {
@@ -1687,7 +1728,7 @@ app.post("/cs/resp/regist", (req, res) => {
                             })
                         } else {
                             let updateCsRespSql = "update cs set admin_email = ?, cs_resp = ?, cs_resp_date = ? where cs_id = ?"
-                            let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', new Date(), req.body.cs_id]
+                            let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', new Date().toLocaleString(), req.body.cs_id]
                             conn.query(updateCsRespSql, updateCsRespParam, function (error) {
                                 if (error) {
                                     console.error(error)
@@ -3636,7 +3677,7 @@ app.post("/contact/resp", (req, res) => {
                             })
                         })
                         let updateContactRespSql = "update contact_log set contact_response = ?, admin_email = ? where contact_id = ?"
-                        let updateContactRespParam = [new Date(), req.session.admin_email, req.body.contact_id]
+                        let updateContactRespParam = [new Date().toLocaleString(), req.session.admin_email, req.body.contact_id]
                         conn.query(updateContactRespSql, updateContactRespParam, function (error) {
                             if (error) {
                                 console.error(error)
@@ -4163,7 +4204,7 @@ app.patch("/point/use-point", (req, res) => {
                                                     content: false
                                                 })
                                             } else {
-                                                let updatePointSql = "update point set use_date = " + conn.escape(new Date()) + ", accept_flag = " + conn.escape(1) +
+                                                let updatePointSql = "update point set use_date = " + conn.escape(new Date().toLocaleString()) + ", accept_flag = " + conn.escape(1) +
                                                     ", admin_email = " + conn.escape(req.session.admin_email) + " where use_code = " + conn.escape(req.body.use_code) +
                                                     " and accept_flag is not null and accept_flag != " + conn.escape(1) + ";"
                                                 updatePointSql += "update member set member_point = " + conn.escape(rows[0].save_point - (rows[0].use_point + req.body.use_point)) +

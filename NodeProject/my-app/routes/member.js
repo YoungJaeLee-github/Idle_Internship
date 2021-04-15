@@ -11,7 +11,7 @@ const app = express.Router()
 const sessionConfig = require("../config/session_config.js")
 const func = require("../common/function.js")
 const getConnection = require("../config/database_config.js").getConnection
-
+const logger = require("../config/winston_config.js").logger
 app.use(sessionConfig.init())
 
 /**
@@ -46,7 +46,7 @@ app.post("/email", (req, res) => {
         let emailCheckQuery = "select member_email, member_secede, member_ban from member where member_email = ?;"
         let selectParam = [tempMemberEmail]
         getConnection((conn) => {
-            conn.query(emailCheckQuery, selectParam, function (error, rows, fields) {
+            conn.query(emailCheckQuery, selectParam, function (error, rows) {
                 if (error) {
                     conn.release()
                     res.status(500).json({
@@ -55,7 +55,7 @@ app.post("/email", (req, res) => {
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
-                    let today = new Date()
+                    let today = new Date().toLocaleString()
                     let tomorrow = new Date(today.setDate(today.getDate() + 1))
                     let urlAuthEmail = "http://localhost:3000/member/email-check?auth_key="
                     let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(?, ?, ?, ?, ?, ?);"
@@ -65,7 +65,7 @@ app.post("/email", (req, res) => {
                             urlAuthEmail += authKey
                             let insertParam = [authKey, 0, tomorrow, 0, tempMemberEmail, req.cookies.chosen_agree]
                             getConnection((conn) => {
-                                conn.query(insertEmailAuth, insertParam, function (error, rows, fields) {
+                                conn.query(insertEmailAuth, insertParam, function (error, rows) {
                                     if (error) {
                                         res.status(500).json({
                                             content: "DB Error"
@@ -107,7 +107,7 @@ app.post("/email", (req, res) => {
                             func.generateAuthKey().then(authKey => {
                                 urlAuthEmail += authKey
                                 let insertParam = [authKey, 0, tomorrow, 0, tempMemberEmail, req.cookies.chosen_agree]
-                                conn.query(insertEmailAuth, insertParam, function (error, rows, fields) {
+                                conn.query(insertEmailAuth, insertParam, function (error, rows) {
                                     if (error) {
                                         res.status(500).json({
                                             content: "DB Error"
@@ -162,7 +162,7 @@ app.get('/email-check', (req, res) => {
         let disPoseCheck = "select email_key, email_dispose, email_date from email_auth where email_key = ?"
         let authKeyParam = [authKey]
         getConnection((conn) => {
-            conn.query(disPoseCheck, authKeyParam, function (error, rows, fields) {
+            conn.query(disPoseCheck, authKeyParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -179,12 +179,12 @@ app.get('/email-check', (req, res) => {
                             })
                         else {
                             // 이메일 인증 url을 클릭 하면, 해당 키의 인증 여부, 유효기간 체크. 현재 날짜보다 작으면 폐기 처리.
-                            let today = new Date()
+                            let today = new Date().toLocaleString()
                             let emailDate = rows[0].email_date
                             if (emailDate < today) {
                                 let disposeUpdate = "update email_auth set email_dispose = ? where email_key = ?;"
                                 let disposeParam = [1, rows[0].email_key]
-                                conn.query(disposeUpdate, disposeParam, function (error, rows, fields) {
+                                conn.query(disposeUpdate, disposeParam, function (error, rows) {
                                     if (error) {
                                         res.status(500).json({
                                             content: "DB Error"
@@ -201,7 +201,7 @@ app.get('/email-check', (req, res) => {
                                 // 정상 접근 시 전송된 email의 url을 클릭하면, 해당 키에 해당하는 인증 여부, 폐기 처리 업데이트.
                                 let updateSql = "update email_auth set email_auth_flag = ?, email_dispose = ? where email_key = ?;"
                                 let updateParam = [1, 1, rows[0].email_key]
-                                conn.query(updateSql, updateParam, function (error, rows, fields) {
+                                conn.query(updateSql, updateParam, function (error, rows) {
                                     if (error) {
                                         res.status(500).json({
                                             content: "DB Error"
@@ -258,7 +258,7 @@ app.post("/signup", (req, res) => {
         let recEmailSql = "select rec_email, temp_chosen_agree from email_auth where email_key = ?;"
         let recEmailParam = [authKey]
         getConnection((conn) => {
-            conn.query(recEmailSql, recEmailParam, function (error, rows, fields) {
+            conn.query(recEmailSql, recEmailParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -275,7 +275,7 @@ app.post("/signup", (req, res) => {
                         // 이미 있는 이메일로 가입 하면 primary key 중복으로 서버 죽을 수 있으므로. 사용자 조회 한번 더 할 필요가 있음.
                         let memberCheckSql = "select member_email, member_secede from member where member_email = ?;"
                         let memberCheckParam = [tempEmail]
-                        conn.query(memberCheckSql, memberCheckParam, function (error, rows, fields) {
+                        conn.query(memberCheckSql, memberCheckParam, function (error, rows) {
                             if (error) {
                                 res.status(500).json({
                                     content: "DB Error"
@@ -290,7 +290,7 @@ app.post("/signup", (req, res) => {
                                             if (memberCheckValue === 200) {
                                                 let insertSql = "insert into member(member_email, member_name, member_sex, member_birth, member_company, member_state, member_pw, member_phone, member_ban, chosen_agree, member_salt, member_secede) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
                                                 let insertParam = [tempEmail, memberName, memberSex, memberBirth, memberCompany, memberState, encryptedPw, encryptedPhone, 0, chosenAgreeValue, salt, 0]
-                                                conn.query(insertSql, insertParam, function (error, rows, fields) {
+                                                conn.query(insertSql, insertParam, function (error, rows) {
                                                     if (error) {
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -323,9 +323,9 @@ app.post("/signup", (req, res) => {
 
                                                 // log 추가.
                                                 let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
-                                                let today = new Date()
+                                                let today = new Date().toLocaleString()
                                                 let memberLogInsertParam = [tempEmail, today, today]
-                                                conn.query(memberLogInsert, memberLogInsertParam, function (error, rows, fields) {
+                                                conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
                                                     if (error) {
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -337,7 +337,7 @@ app.post("/signup", (req, res) => {
                                                 // log 추가.
                                                 let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
                                                 let memberLoginLogParam = [tempEmail, today]
-                                                conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows, fields) {
+                                                conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
                                                     if (error) {
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -351,7 +351,7 @@ app.post("/signup", (req, res) => {
                                                 let newEmail = rows[0].member_email
                                                 let updateSql = "update member set member_name = ?, member_sex = ?, member_birth = ?, member_company = ?, member_state = ?, member_pw = ?, member_phone = ?, member_ban = ?, chosen_agree = ?, member_salt = ?, member_secede = ? where member_email = ?"
                                                 let updateParam = [memberName, memberSex, memberBirth, memberCompany, memberState, encryptedPw, encryptedPhone, 0, chosenAgreeValue, salt, 0, newEmail]
-                                                conn.query(updateSql, updateParam, function (error, rows, fields) {
+                                                conn.query(updateSql, updateParam, function (error, rows) {
                                                     if (error) {
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -385,9 +385,9 @@ app.post("/signup", (req, res) => {
 
                                                 // log 추가.
                                                 let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
-                                                let today = new Date()
+                                                let today = new Date().toLocaleString()
                                                 let memberLogInsertParam = [newEmail, today, today]
-                                                conn.query(memberLogInsert, memberLogInsertParam, function (error, rows, fields) {
+                                                conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
                                                     if (error) {
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -407,7 +407,7 @@ app.post("/signup", (req, res) => {
                                                 // log 추가.
                                                 let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
                                                 let memberLoginLogParam = [newEmail, today]
-                                                conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows, fields) {
+                                                conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
                                                     if (error) {
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -453,7 +453,7 @@ app.post("/login", (req, res) => {
         let selectSql = "select member_email, member_pw, member_ban, member_salt, member_secede from member where member_email = ?;"
         let selectParam = [memberEmail]
         getConnection((conn) => {
-            conn.query(selectSql, selectParam, function (error, rows, fields) {
+            conn.query(selectSql, selectParam, function (error, rows) {
                 if (error) {
                     res.status(500).json("DB Error")
                 } else {
@@ -491,9 +491,9 @@ app.post("/login", (req, res) => {
                                     })
 
                                     let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
-                                    let today = new Date()
+                                    let today = new Date().toLocaleString()
                                     let memberLogParam = [today, rows[0].member_email]
-                                    conn.query(memberLogUpdate, memberLogParam, function (error, rows, fields) {
+                                    conn.query(memberLogUpdate, memberLogParam, function (error, rows) {
                                         if (error) {
                                             res.status(500).json({
                                                 content: "DB Error"
@@ -504,7 +504,7 @@ app.post("/login", (req, res) => {
 
                                     let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
                                     let memberLoginLogParam = [rows[0].member_email, today]
-                                    conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows, fields) {
+                                    conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
                                         if (error) {
                                             res.status(500).json({
                                                 content: "DB Error"
@@ -556,7 +556,7 @@ app.delete("/secede", (req, res) => {
         let compareSql = "select member_email from member where member_email = ?;"
         let compareParam = [sessionEmail]
         getConnection((conn) => {
-            conn.query(compareSql, compareParam, function (error, rows, fields) {
+            conn.query(compareSql, compareParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -570,7 +570,7 @@ app.delete("/secede", (req, res) => {
                         if (sessionEmail === rows[0].member_email) {
                             let updateSql = "update member set member_secede = ? where member_email = ?;"
                             let updateParam = [1, rows[0].member_email]
-                            conn.query(updateSql, updateParam, function (error, rows, fields) {
+                            conn.query(updateSql, updateParam, function (error, rows) {
                                 if (error) {
                                     res.status(500).json({
                                         content: "DB Error"
@@ -608,7 +608,7 @@ app.post("/pw/find", (req, res) => {
         let selectSql = "select member_email, member_ban, member_secede from member where member_email = ?;"
         let selectParma = [tempEmail]
         getConnection((conn) => {
-            conn.query(selectSql, selectParma, function (error, rows, fields) {
+            conn.query(selectSql, selectParma, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -627,11 +627,11 @@ app.post("/pw/find", (req, res) => {
                         // 정지, 탈퇴 여부 체크
                         if (rows[0].member_ban === 0 && rows[0].member_secede === 0) {
                             func.generateAuthKey().then(key => {
-                                let today = new Date()
+                                let today = new Date().toLocaleString()
                                 let tomorrow = new Date(today.setDate(today.getDate() + 1))
                                 let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(?, ?, ?, ?, ?)"
                                 let insertParam = [key, 0, tomorrow, 0, rows[0].member_email]
-                                conn.query(insertSql, insertParam, function (error, rows, fields) {
+                                conn.query(insertSql, insertParam, function (error, rows) {
                                     if (error) {
                                         res.status(500).json({
                                             content: "DB Error"
@@ -686,7 +686,7 @@ app.get('/pw/reset-redirect', (req, res) => {
         let compareSql = "select pw_key, pw_edit, pw_date, pw_dispose, member_email from pw_find where pw_key = ?"
         let compareParam = [pwKey]
         getConnection((conn) => {
-            conn.query(compareSql, compareParam, function (error, rows, fields) {
+            conn.query(compareSql, compareParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -707,11 +707,11 @@ app.get('/pw/reset-redirect', (req, res) => {
                             // 폐기 되지 않았을 때
                             else {
                                 // 유효기간이 지났으면 폐기 처리 후 접근 불가
-                                let today = new Date()
+                                let today = new Date().toLocaleString()
                                 if (rows[0].pw_date < today) {
                                     let updateDispose = "update pw_find set pw_dispose = ? where pw_key = ?"
                                     let updateParam = [1, rows[0].pw_key]
-                                    conn.query(updateDispose, updateParam, function (error, rows, fields) {
+                                    conn.query(updateDispose, updateParam, function (error, rows) {
                                         if (error) {
                                             res.status(500).json({
                                                 content: "DB Error"
@@ -767,7 +767,7 @@ app.patch("/pw/reset", (req, res) => {
         let selectParam = [pwKey]
         getConnection((conn) => {
             // 세션에 있는 키 값으로 사용자 이메일 조회.
-            conn.query(selectSql, selectParam, function (error, rows, fields) {
+            conn.query(selectSql, selectParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -781,7 +781,7 @@ app.patch("/pw/reset", (req, res) => {
                         // 해당 이메일과 일치하는 사용자 테이블의 패스워드 암호화 후 업데이트.
                         let memberCheckSql = "select member_email, member_ban, member_secede from member where member_email = ?;"
                         let memberCheckParam = [rows[0].member_email]
-                        conn.query(memberCheckSql, memberCheckParam, function (error, rows, fields) {
+                        conn.query(memberCheckSql, memberCheckParam, function (error, rows) {
                             if (error) {
                                 res.status(500).json({
                                     content: "DB Error"
@@ -800,7 +800,7 @@ app.patch("/pw/reset", (req, res) => {
                                             let tempEmail = rows[0].member_email
                                             let memberUpdateSql = "update member set member_pw = ?, member_salt = ? where member_email = ?;"
                                             let memberUpdateParam = [encryptedNewPw, salt, tempEmail]
-                                            conn.query(memberUpdateSql, memberUpdateParam, function (error, rows, fields) {
+                                            conn.query(memberUpdateSql, memberUpdateParam, function (error, rows) {
                                                 if (error) {
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -815,7 +815,7 @@ app.patch("/pw/reset", (req, res) => {
                                             // 재설정 여부, 폐기 여부 update 후 세션 삭제.
                                             let pwUpdateSql = "update pw_find set pw_edit = ?, pw_dispose = ? where pw_key = ?;"
                                             let pwUpdateParam = [1, 1, pwKey]
-                                            conn.query(pwUpdateSql, pwUpdateParam, function (error, rows, fields) {
+                                            conn.query(pwUpdateSql, pwUpdateParam, function (error, rows) {
                                                 if (error) {
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -863,7 +863,7 @@ app.post("/update", (req, res) => {
         let compareSql = "select member_pw, member_salt from member where member_email = ?"
         let compareParam = [memberEmail]
         getConnection((conn) => {
-            conn.query(compareSql, compareParam, function (error, rows, fields) {
+            conn.query(compareSql, compareParam, function (error, rows) {
                 if (error) {
                     res.status(500).json({
                         content: "DB Error"
@@ -918,7 +918,7 @@ app.patch("/update-detail", (req, res) => {
                 crypto.encryption(memberPhone).then(encryptedPhone => {
                     updateParam = [memberName, encryptedPw, memberSex, memberBirth, encryptedPhone, memberCompany, memberState, salt, memberEmail]
                     getConnection((conn) => {
-                        conn.query(updateSql, updateParam, function (error, rows, fields) {
+                        conn.query(updateSql, updateParam, function (error, rows) {
                             if (error) {
                                 res.status(500).json({
                                     content: "DB Error"
