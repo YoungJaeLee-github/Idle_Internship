@@ -55,14 +55,13 @@ app.post("/email", (req, res) => {
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
-                    let tomorrow = "DATE_ADD(NOW(), INTERVAL 1 DAY)"
                     let urlAuthEmail = "http://localhost:3000/member/email-check?auth_key="
                     let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(?, ?, ?, ?, ?, ?);"
                     // 최초 가입.
                     if (memberCheckValue === 200) {
                         func.generateAuthKey().then(authKey => {
                             urlAuthEmail += authKey
-                            let insertParam = [authKey, 0, tomorrow, 0, tempMemberEmail, req.cookies.chosen_agree]
+                            let insertParam = [authKey, 0, "DATE_ADD(NOW(), INTERVAL 1 DAY)", 0, tempMemberEmail, req.cookies.chosen_agree]
                             getConnection((conn) => {
                                 conn.query(insertEmailAuth, insertParam, function (error) {
                                     if (error) {
@@ -109,7 +108,7 @@ app.post("/email", (req, res) => {
                         else {
                             func.generateAuthKey().then(authKey => {
                                 urlAuthEmail += authKey
-                                let insertParam = [authKey, 0, tomorrow, 0, tempMemberEmail, req.cookies.chosen_agree]
+                                let insertParam = [authKey, 0, "DATE_ADD(NOW(), INTERVAL 1 DAY)", 0, tempMemberEmail, req.cookies.chosen_agree]
                                 conn.query(insertEmailAuth, insertParam, function (error, rows) {
                                     if (error) {
                                         console.error(error)
@@ -649,9 +648,8 @@ app.post("/pw/find", (req, res) => {
                         // 정지, 탈퇴 여부 체크
                         if (rows[0].member_ban === 0 && rows[0].member_secede === 0) {
                             func.generateAuthKey().then(key => {
-                                let tomorrow = "DATE_ADD(NOW(), INTERVAL 1 DAY)"
                                 let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(?, ?, ?, ?, ?)"
-                                let insertParam = [key, 0, tomorrow, 0, rows[0].member_email]
+                                let insertParam = [key, 0, "DATE_ADD(NOW(), INTERVAL 1 DAY)", 0, rows[0].member_email]
                                 conn.query(insertSql, insertParam, function (error, rows) {
                                     if (error) {
                                         console.error(error)
