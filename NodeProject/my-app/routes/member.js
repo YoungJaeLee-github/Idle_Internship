@@ -483,17 +483,12 @@ app.post("/login", (req, res) => {
                                             res.status(500).json({
                                                 content: "Session Error"
                                             })
-                                        else
-                                            // TODO 메인 페이지로 이동
-                                            res.status(200).json({
-                                                content: true
-                                            })
                                     })
 
                                     let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
                                     let today = new Date().toLocaleString()
                                     let memberLogParam = [today, rows[0].member_email]
-                                    conn.query(memberLogUpdate, memberLogParam, function (error, rows) {
+                                    conn.query(memberLogUpdate, memberLogParam, function (error) {
                                         if (error) {
                                             res.status(500).json({
                                                 content: "DB Error"
@@ -504,7 +499,7 @@ app.post("/login", (req, res) => {
 
                                     let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
                                     let memberLoginLogParam = [rows[0].member_email, today]
-                                    conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
+                                    conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
                                         if (error) {
                                             res.status(500).json({
                                                 content: "DB Error"
@@ -512,6 +507,12 @@ app.post("/login", (req, res) => {
                                         } else
                                             console.log("insert query is executed.")
                                     })
+
+                                    // TODO 메인 페이지로 이동
+                                    res.status(200).json({
+                                        content: true
+                                    })
+
                                 } else {
                                     // TODO 로그인 실패(비밀번호가 틀린 경우). 다시 로그인 화면으로 redirect
                                     res.status(401).json({
