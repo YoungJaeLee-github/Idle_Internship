@@ -3,3 +3,4 @@ config
 .idea
 files
 logs
+forever_logs
