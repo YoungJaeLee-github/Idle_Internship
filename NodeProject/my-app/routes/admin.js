@@ -233,7 +233,10 @@ async function contentsCrawling(page) {
 
 // cron.schedule("42 13 * * *", async function () {
 //     console.log("list Crawling Start.")
-//     const browser = await puppeteer.launch({headless: false})
+//     const browser = await puppeteer.launch({
+//         headless: false,
+//         args: ['--no-sandbox', '--disable-setuid-sandbox']
+//     })
 //     const page = await browser.newPage()
 //     await page.setViewport({
 //         width: 1920,
@@ -249,7 +252,10 @@ async function contentsCrawling(page) {
 
 cron.schedule("*/10 * * * * *", async function () {
     console.log("list Crawling Start.")
-    const browser = await puppeteer.launch({headless: false})
+    const browser = await puppeteer.launch({
+        headless: false,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    })
     const page = await browser.newPage()
     await page.setViewport({
         width: 1920,
