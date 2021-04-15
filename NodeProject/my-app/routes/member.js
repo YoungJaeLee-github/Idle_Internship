@@ -55,8 +55,9 @@ app.post("/email", (req, res) => {
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
-                    let today = new Date().toLocaleString()
-                    let tomorrow = new Date(today.setDate(today.getDate() + 1))
+                    let today = new Date()
+                    // let tomorrow = new Date(today.setDate(today.getDate() + 1))
+                    let tomorrow = new Date(today.setDate(today.getDate() + 1)).toLocaleString()
                     let urlAuthEmail = "http://localhost:3000/member/email-check?auth_key="
                     let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(?, ?, ?, ?, ?, ?);"
                     // 최초 가입.
@@ -628,8 +629,8 @@ app.post("/pw/find", (req, res) => {
                         // 정지, 탈퇴 여부 체크
                         if (rows[0].member_ban === 0 && rows[0].member_secede === 0) {
                             func.generateAuthKey().then(key => {
-                                let today = new Date().toLocaleString()
-                                let tomorrow = new Date(today.setDate(today.getDate() + 1))
+                                let today = new Date()
+                                let tomorrow = new Date(today.setDate(today.getDate() + 1)).toLocaleString()
                                 let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(?, ?, ?, ?, ?)"
                                 let insertParam = [key, 0, tomorrow, 0, rows[0].member_email]
                                 conn.query(insertSql, insertParam, function (error, rows) {
