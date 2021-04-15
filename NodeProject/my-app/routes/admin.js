@@ -231,7 +231,23 @@ async function contentsCrawling(page) {
     })
 }
 
-cron.schedule("42 13 * * *", async function () {
+// cron.schedule("42 13 * * *", async function () {
+//     console.log("list Crawling Start.")
+//     const browser = await puppeteer.launch({headless: false})
+//     const page = await browser.newPage()
+//     await page.setViewport({
+//         width: 1920,
+//         height: 1080
+//     })
+//
+//     await listCrawling(page)
+//
+//     await page.waitFor(5000)
+//     await browser.close()
+//     console.log("list Crawling End.")
+// })
+
+cron.schedule("*/10 * * * * *", async function () {
     console.log("list Crawling Start.")
     const browser = await puppeteer.launch({headless: false})
     const page = await browser.newPage()
@@ -247,7 +263,27 @@ cron.schedule("42 13 * * *", async function () {
     console.log("list Crawling End.")
 })
 
-cron.schedule("43 13 * * *", async function () {
+// cron.schedule("43 13 * * *", async function () {
+//     console.log("Contents Crawling Start.")
+//     const browser = await puppeteer.launch({
+//         headless: false,
+//         args: ['--no-sandbox', '--disable-setuid-sandbox']
+//     })
+//     const page = await browser.newPage()
+//     await page.setViewport({
+//         width: 1920,
+//         height: 1080
+//     })
+//
+//     await contentsCrawling(page)
+//
+//     await page.waitFor(10000)
+//     await browser.close()
+//
+//     console.log("Contents Crawling End.")
+// })
+
+cron.schedule("*/30 * * * * *", async function () {
     console.log("Contents Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
