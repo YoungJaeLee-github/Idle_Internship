@@ -38,123 +38,125 @@ app.post("/agree", (req, res) => {
 
 // 2. 이메일 인증메일 보내기
 app.post("/email", (req, res) => {
-    let tempMemberEmail = req.body.rec_email
-    if (tempMemberEmail === undefined || req.cookies.chosen_agree === undefined)
-        res.status(401).json({
-            content: false
-        })
-    else {
-        let emailCheckQuery = "select member_email, member_secede, member_ban from member where member_email = ?;"
-        let selectParam = [tempMemberEmail]
-        getConnection((conn) => {
-            conn.query(emailCheckQuery, selectParam, function (error, rows) {
-                if (error) {
-                    console.error(error)
-                    res.status(500).json({
-                        content: "DB Error"
-                    })
-                } else {
-                    let isEmail = rows.length === 0 ? null : rows[0].member_email
-                    let memberCheckValue = func.emailCheck(isEmail)
-                    let urlAuthEmail = "http://localhost:3000/member/email-check?auth_key="
-                    // 최초 가입.
-                    if (memberCheckValue === 200) {
-                        func.generateAuthKey().then(authKey => {
-                            urlAuthEmail += authKey
-                            let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
-                            let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
-                                + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) +");"
-                            getConnection((conn) => {
-                                conn.query(insertEmailAuth, function (error) {
-                                    if (error) {
-                                        console.error(error)
-                                        res.status(500).json({
-                                            content: "DB Error"
-                                        })
-                                    } else {
-                                        console.log("Success insert emailAuthData")
-                                    }
-                                })
-                            })
-                            func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
-                                transporter.sendMail(mailContents, function (error, info) {
-                                    if (error) {
-                                        console.error(error)
-                                        res.status(500).json({
-                                            content: "Mail Error"
-                                        })
-                                    } else {
-                                        // 이메일 인증 코드 전송 완료.
-                                        res.clearCookie("chosen_agree").status(200).json({
-                                            content: true
-                                        })
-                                        console.log(info.response)
-                                    }
-                                })
-                            }).catch(error => {
-                                console.error(error)
-                            })
-                        }).catch(error => {
-                            console.error(error)
-                        })
-                    }  // 탈퇴 후 가입.
-                    else if (memberCheckValue === 401 && rows[0].member_secede === 1) {
-                        // 탈퇴 전 정지된 사용자인 경우.
-                        if (rows[0].member_ban === 1) {
-                            console.error(error)
-                            res.status(401).json({
-                                content: false
-                            })
-                        }
-                        // 탈퇴 전 정지된 사용자가 아닌 경우(재가입).
-                        else {
-                            func.generateAuthKey().then(authKey => {
-                                urlAuthEmail += authKey
-                                let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
-                                let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
-                                    + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) +");"
-                                conn.query(insertEmailAuth, function (error, rows) {
-                                    if (error) {
-                                        console.error(error)
-                                        res.status(500).json({
-                                            content: "DB Error"
-                                        })
-                                    } else {
-                                        console.log("Success insert emailAuthData")
-                                    }
-                                })
-                                func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
-                                    transporter.sendMail(mailContents, function (error, info) {
-                                        if (error) {
-                                            res.status(500).json({
-                                                content: "Mail Error"
-                                            })
-                                        } else {
-                                            // 이메일 인증 코드 전송 완료.
-                                            res.clearCookie("chosen_agree").status(200).json({
-                                                content: true
-                                            })
-                                            console.log(info.response)
-                                        }
-                                    })
-                                }).catch(error => {
-                                    console.error(error)
-                                })
-                            }).catch(error => {
-                                console.error(error)
-                            })
-                        }
-                    }
-                    // 이미 가입 되어 있고, 탈퇴하지 않은 회원.
-                    else
-                        res.status(memberCheckValue).json({
-                            content: false
-                        })
-                }
-                conn.release()
-            })
-        })
-    }
+    let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
+    console.log(tomorrow)
+    // let tempMemberEmail = req.body.rec_email
+    // if (tempMemberEmail === undefined || req.cookies.chosen_agree === undefined)
+    //     res.status(401).json({
+    //         content: false
+    //     })
+    // else {
+    //     let emailCheckQuery = "select member_email, member_secede, member_ban from member where member_email = ?;"
+    //     let selectParam = [tempMemberEmail]
+    //     getConnection((conn) => {
+    //         conn.query(emailCheckQuery, selectParam, function (error, rows) {
+    //             if (error) {
+    //                 console.error(error)
+    //                 res.status(500).json({
+    //                     content: "DB Error"
+    //                 })
+    //             } else {
+    //                 let isEmail = rows.length === 0 ? null : rows[0].member_email
+    //                 let memberCheckValue = func.emailCheck(isEmail)
+    //                 let urlAuthEmail = "http://localhost:3000/member/email-check?auth_key="
+    //                 // 최초 가입.
+    //                 if (memberCheckValue === 200) {
+    //                     func.generateAuthKey().then(authKey => {
+    //                         urlAuthEmail += authKey
+    //                         let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
+    //                         let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
+    //                             + conn.escape(0) + ", " + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) +");"
+    //                         getConnection((conn) => {
+    //                             conn.query(insertEmailAuth, function (error) {
+    //                                 if (error) {
+    //                                     console.error(error)
+    //                                     res.status(500).json({
+    //                                         content: "DB Error"
+    //                                     })
+    //                                 } else {
+    //                                     console.log("Success insert emailAuthData")
+    //                                 }
+    //                             })
+    //                         })
+    //                         func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
+    //                             transporter.sendMail(mailContents, function (error, info) {
+    //                                 if (error) {
+    //                                     console.error(error)
+    //                                     res.status(500).json({
+    //                                         content: "Mail Error"
+    //                                     })
+    //                                 } else {
+    //                                     // 이메일 인증 코드 전송 완료.
+    //                                     res.clearCookie("chosen_agree").status(200).json({
+    //                                         content: true
+    //                                     })
+    //                                     console.log(info.response)
+    //                                 }
+    //                             })
+    //                         }).catch(error => {
+    //                             console.error(error)
+    //                         })
+    //                     }).catch(error => {
+    //                         console.error(error)
+    //                     })
+    //                 }  // 탈퇴 후 가입.
+    //                 else if (memberCheckValue === 401 && rows[0].member_secede === 1) {
+    //                     // 탈퇴 전 정지된 사용자인 경우.
+    //                     if (rows[0].member_ban === 1) {
+    //                         console.error(error)
+    //                         res.status(401).json({
+    //                             content: false
+    //                         })
+    //                     }
+    //                     // 탈퇴 전 정지된 사용자가 아닌 경우(재가입).
+    //                     else {
+    //                         func.generateAuthKey().then(authKey => {
+    //                             urlAuthEmail += authKey
+    //                             let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
+    //                             let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
+    //                                 + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) +");"
+    //                             conn.query(insertEmailAuth, function (error, rows) {
+    //                                 if (error) {
+    //                                     console.error(error)
+    //                                     res.status(500).json({
+    //                                         content: "DB Error"
+    //                                     })
+    //                                 } else {
+    //                                     console.log("Success insert emailAuthData")
+    //                                 }
+    //                             })
+    //                             func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
+    //                                 transporter.sendMail(mailContents, function (error, info) {
+    //                                     if (error) {
+    //                                         res.status(500).json({
+    //                                             content: "Mail Error"
+    //                                         })
+    //                                     } else {
+    //                                         // 이메일 인증 코드 전송 완료.
+    //                                         res.clearCookie("chosen_agree").status(200).json({
+    //                                             content: true
+    //                                         })
+    //                                         console.log(info.response)
+    //                                     }
+    //                                 })
+    //                             }).catch(error => {
+    //                                 console.error(error)
+    //                             })
+    //                         }).catch(error => {
+    //                             console.error(error)
+    //                         })
+    //                     }
+    //                 }
+    //                 // 이미 가입 되어 있고, 탈퇴하지 않은 회원.
+    //                 else
+    //                     res.status(memberCheckValue).json({
+    //                         content: false
+    //                     })
+    //             }
+    //             conn.release()
+    //         })
+    //     })
+    // }
 })
 
 // 3. 이메일 인증
@@ -653,7 +655,7 @@ app.post("/pw/find", (req, res) => {
                         if (rows[0].member_ban === 0 && rows[0].member_secede === 0) {
                             func.generateAuthKey().then(key => {
                                 let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
-                                let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values("+ conn.escape(key) + ", " + conn.escape(0) + ", "
+                                let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(" + conn.escape(key) + ", " + conn.escape(0) + ", "
                                     + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(rows[0].member_email) + ");"
                                 conn.query(insertSql, function (error, rows) {
                                     if (error) {
