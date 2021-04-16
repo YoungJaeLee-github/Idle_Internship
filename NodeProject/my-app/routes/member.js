@@ -58,11 +58,10 @@ app.post("/email", (req, res) => {
                 } else {
                     let isEmail = rows.length === 0 ? null : rows[0].member_email
                     let memberCheckValue = func.emailCheck(isEmail)
-                    let urlAuthEmail = "http://152.67.193.89:3000/member/email-check?auth_key="
                     // 최초 가입.
                     if (memberCheckValue === 200) {
                         func.generateAuthKey().then(authKey => {
-                            urlAuthEmail += authKey
+                            let urlAuthEmail = "<a href = http://152.67.193.89:3000/member/email-check?auth_key=" + authKey + "> 여기를 클릭하세요. </a>"
                             let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
                             let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
                                 + conn.escape(0) + ", " + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) + ");"
@@ -115,7 +114,7 @@ app.post("/email", (req, res) => {
                         // 탈퇴 전 정지된 사용자가 아닌 경우(재가입).
                         else {
                             func.generateAuthKey().then(authKey => {
-                                urlAuthEmail += authKey
+                                let urlAuthEmail = "<a href = http://152.67.193.89:3000/member/email-check?auth_key=" + authKey + "> 여기를 클릭하세요. </a>"
                                 let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
                                 let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
                                     + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) + ");"

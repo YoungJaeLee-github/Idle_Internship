@@ -3739,7 +3739,8 @@ app.post("/contact/resp", (req, res) => {
                     else {
                         conn.beginTransaction()
                         let senderEmail = rows[0].email
-                        func.sendEmail(senderEmail, req.body.contact_resp_contents, req.body.contact_resp_title).then(mailContents => {
+                        let contactRespContents = "<p>" + req.body.contact_resp_contents +"</p>"
+                        func.sendEmail(senderEmail, contactRespContents, req.body.contact_resp_title).then(mailContents => {
                             transporter.sendMail(mailContents, function (error, info) {
                                 if (error) {
                                     conn.rollback()

@@ -23,7 +23,7 @@ async function sendEmail(receiverEmail, contents, mailTitle) {
             from: mailer.senderEmail(),
             to: receiverEmail,
             subject: mailTitle,
-            text: contents
+            html: contents
         })
     })
 }
