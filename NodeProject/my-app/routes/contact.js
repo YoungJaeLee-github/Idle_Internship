@@ -55,7 +55,7 @@ app.post("/", (req, res) => {
                         }
                     }
                 }
-                conn.query
+                conn.release()
             })
         })
     }
@@ -84,13 +84,16 @@ app.post("/regist", (req, res) => {
                     insertContactSql += "insert into contact_log(contact_id, contact_send) values((select contact_id from contact where email = " +
                         conn.escape(req.body.email) + " order by contact_id desc limit " + conn.escape(1) + "), " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
                     if (rows.length === 0) {
+                        conn.beginTransaction()
                         conn.query(insertContactSql, function (error) {
                             if (error) {
+                                conn.rollback()
                                 console.error(error)
                                 res.status(500).json({
                                     content: "DB Error"
                                 })
                             } else {
+                                conn.commit()
                                 console.log("Success insert contact data.")
                                 res.status(200).json({
                                     content: true
@@ -103,13 +106,16 @@ app.post("/regist", (req, res) => {
                                 content: false
                             })
                         } else {
+                            conn.beginTransaction()
                             conn.query(insertContactSql, function (error) {
                                 if (error) {
+                                    conn.rollback()
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
                                     })
                                 } else {
+                                    conn.commit()
                                     console.log("Success insert contact data.")
                                     res.status(200).json({
                                         content: true

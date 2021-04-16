@@ -66,26 +66,30 @@ app.post("/email", (req, res) => {
                             let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
                             let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
                                 + conn.escape(0) + ", " + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) + ");"
-                            getConnection((conn) => {
-                                conn.query(insertEmailAuth, function (error) {
-                                    if (error) {
-                                        console.error(error)
-                                        res.status(500).json({
-                                            content: "DB Error"
-                                        })
-                                    } else {
-                                        console.log("Success insert emailAuthData")
-                                    }
-                                })
+
+                            conn.beginTransaction()
+                            conn.query(insertEmailAuth, function (error) {
+                                if (error) {
+                                    conn.rollback()
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+
+                                    console.log("Success insert emailAuthData")
+                                }
                             })
                             func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
                                 transporter.sendMail(mailContents, function (error, info) {
                                     if (error) {
+                                        conn.rollback()
                                         console.error(error)
                                         res.status(500).json({
                                             content: "Mail Error"
                                         })
                                     } else {
+                                        conn.commit()
                                         // 이메일 인증 코드 전송 완료.
                                         res.clearCookie("chosen_agree").status(200).json({
                                             content: true
@@ -115,8 +119,10 @@ app.post("/email", (req, res) => {
                                 let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
                                 let insertEmailAuth = "insert into email_auth(email_key, email_auth_flag, email_date, email_dispose, rec_email, temp_chosen_agree) values(" + conn.escape(authKey) + ", "
                                     + conn.escape(0) + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(tempMemberEmail) + ", " + conn.escape(req.cookies.chosen_agree * 1) + ");"
+                                conn.beginTransaction()
                                 conn.query(insertEmailAuth, function (error, rows) {
                                     if (error) {
+                                        conn.rollback()
                                         console.error(error)
                                         res.status(500).json({
                                             content: "DB Error"
@@ -128,10 +134,12 @@ app.post("/email", (req, res) => {
                                 func.sendEmail(tempMemberEmail, urlAuthEmail, "[idea platform] Regarding email authentication.").then(mailContents => {
                                     transporter.sendMail(mailContents, function (error, info) {
                                         if (error) {
+                                            conn.rollback()
                                             res.status(500).json({
                                                 content: "Mail Error"
                                             })
                                         } else {
+                                            conn.commit()
                                             // 이메일 인증 코드 전송 완료.
                                             res.clearCookie("chosen_agree").status(200).json({
                                                 content: true
@@ -194,13 +202,16 @@ app.get('/email-check', (req, res) => {
                             if (emailDate < today) {
                                 let disposeUpdate = "update email_auth set email_dispose = ? where email_key = ?;"
                                 let disposeParam = [1, rows[0].email_key]
+                                conn.beginTransaction()
                                 conn.query(disposeUpdate, disposeParam, function (error, rows) {
                                     if (error) {
+                                        conn.rollback()
                                         console.error(error)
                                         res.status(500).json({
                                             content: "DB Error"
                                         })
                                     } else {
+                                        conn.commit()
                                         console.log("Update Dispose Query is Executed.")
                                         res.status(401).json({
                                             content: false
@@ -212,14 +223,17 @@ app.get('/email-check', (req, res) => {
                                 // 정상 접근 시 전송된 email의 url을 클릭하면, 해당 키에 해당하는 인증 여부, 폐기 처리 업데이트.
                                 let updateSql = "update email_auth set email_auth_flag = ?, email_dispose = ? where email_key = ?;"
                                 let updateParam = [1, 1, rows[0].email_key]
+                                conn.beginTransaction()
                                 conn.query(updateSql, updateParam, function (error, rows) {
                                     if (error) {
+                                        conn.rollback()
                                         console.error(error)
                                         res.status(500).json({
                                             content: "DB Error"
                                         })
-                                    } else
+                                    } else {
                                         console.log("Update Flag and Dispose Query is Executed.")
+                                    }
                                 })
 
                                 // 키가 일치하면 회원가입 페이지로 redirect
@@ -227,19 +241,25 @@ app.get('/email-check', (req, res) => {
                                     req.session.auth_key = authKey
                                     //TODO 회원 가입 페이지로 redirect.(인증한 이메일 정보를 어떻게 가지고 가야될지 고민.)
                                     req.session.save(function (error) {
-                                        if (error)
+                                        if (error) {
+                                            conn.rollback()
                                             res.status(500).json({
                                                 content: "Session Error"
                                             })
-                                        else
+                                        } else {
+                                            conn.commit()
                                             res.status(200).json({
                                                 content: true
                                             })
+                                        }
                                     })
-                                } else // 키 불일치.
+                                } else {
+                                    conn.commit()
+                                    // 키 불일치.
                                     res.status(401).json({
                                         content: false
                                     })
+                                }
                             }
                         }
                     }
@@ -304,34 +324,42 @@ app.post("/signup", (req, res) => {
                                             if (memberCheckValue === 200) {
                                                 let insertSql = "insert into member(member_email, member_name, member_sex, member_birth, member_company, member_state, member_pw, member_phone, member_ban, chosen_agree, member_salt, member_secede) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
                                                 let insertParam = [tempEmail, memberName, memberSex, memberBirth, memberCompany, memberState, encryptedPw, encryptedPhone, 0, chosenAgreeValue, salt, 0]
+                                                conn.beginTransaction()
                                                 conn.query(insertSql, insertParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
-                                                        console.log("Insert Into member Query is Executed.")
                                                         req.session.member_email = tempEmail
                                                         req.session.member_pw = encryptedPw
                                                         req.session.save(function (error) {
-                                                            if (error)
+                                                            if (error) {
+                                                                conn.rollback()
                                                                 res.status(500).json({
                                                                     content: "Session Error"
                                                                 })
-                                                            else
-                                                                // TODO 메인 페이지로 redirect
-                                                                res.status(200).json({
-                                                                    content: true
-                                                                })
+                                                            } else {
+                                                                console.log("Insert Into member Query is Executed.")
+                                                            }
                                                         })
 
                                                         delete req.session.auth_key
                                                         req.session.save(function (error) {
-                                                            if (error)
+                                                            if (error) {
+                                                                conn.rollback()
                                                                 res.status(500).json({
                                                                     content: "Session Error"
                                                                 })
+                                                            } else {
+                                                                console.log("delete session auth key.")
+                                                                // TODO 메인 페이지로 redirect
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
                                                         })
                                                     }
                                                 })
@@ -342,6 +370,7 @@ app.post("/signup", (req, res) => {
                                                 let memberLogInsertParam = [tempEmail, today, today]
                                                 conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -355,12 +384,15 @@ app.post("/signup", (req, res) => {
                                                 let memberLoginLogParam = [tempEmail, today]
                                                 conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
-                                                    } else
+                                                    } else {
                                                         console.log("Success.")
+                                                        conn.commit()
+                                                    }
                                                 })
                                             }
                                             // 이메일이 있고, 탈퇴 여부 1 이면 재가입.
@@ -368,14 +400,15 @@ app.post("/signup", (req, res) => {
                                                 let newEmail = rows[0].member_email
                                                 let updateSql = "update member set member_name = ?, member_sex = ?, member_birth = ?, member_company = ?, member_state = ?, member_pw = ?, member_phone = ?, member_ban = ?, chosen_agree = ?, member_salt = ?, member_secede = ? where member_email = ?"
                                                 let updateParam = [memberName, memberSex, memberBirth, memberCompany, memberState, encryptedPw, encryptedPhone, 0, chosenAgreeValue, salt, 0, newEmail]
+                                                conn.beginTransaction()
                                                 conn.query(updateSql, updateParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
-                                                        console.log("update query is executed.")
                                                         req.session.member_email = newEmail
                                                         req.session.member_pw = encryptedPw
                                                         req.session.save(function (error) {
@@ -384,11 +417,7 @@ app.post("/signup", (req, res) => {
                                                                     content: "Session Error"
                                                                 })
                                                             else
-                                                                // TODO 메인 페이지로 redirect
-                                                                // res.redirect(307, "/")
-                                                                res.status(200).json({
-                                                                    content: true
-                                                                })
+                                                                console.log("update query is executed.")
                                                         })
 
                                                         delete req.session.auth_key
@@ -397,6 +426,13 @@ app.post("/signup", (req, res) => {
                                                                 res.status(500).json({
                                                                     content: "Session Error"
                                                                 })
+                                                            else {
+                                                                // TODO 메인 페이지로 redirect
+                                                                // res.redirect(307, "/")
+                                                                res.status(200).json({
+                                                                    content: true
+                                                                })
+                                                            }
                                                         })
                                                     }
                                                 })
@@ -407,6 +443,7 @@ app.post("/signup", (req, res) => {
                                                 let memberLogInsertParam = [newEmail, today, today]
                                                 conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -428,12 +465,15 @@ app.post("/signup", (req, res) => {
                                                 let memberLoginLogParam = [newEmail, today]
                                                 conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
-                                                    } else
+                                                    } else {
+                                                        conn.commit()
                                                         console.log("Success.")
+                                                    }
                                                 })
                                             }
                                             // 이메일이 있고, 탈퇴 여부 0 이면 이미 있는 사용자
@@ -496,14 +536,17 @@ app.post("/login", (req, res) => {
                         else {
                             crypto.encryptByHash(tempPw, rows[0].member_salt).then(memberPw => {
                                 // 입력한 비밀번호 해시 암호화 한 값과 회원 테이블에 해당 이메일의 비밀번호 값 비교 및 정지여부 확인.
+                                conn.beginTransaction()
                                 if (memberPw === rows[0].member_pw) {
                                     req.session.member_email = rows[0].member_email
                                     req.session.member_pw = rows[0].member_pw
                                     req.session.save(function (error) {
-                                        if (error)
+                                        if (error) {
+                                            conn.rollback()
                                             res.status(500).json({
                                                 content: "Session Error"
                                             })
+                                        }
                                     })
 
                                     let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
@@ -511,6 +554,7 @@ app.post("/login", (req, res) => {
                                     let memberLogParam = [today, rows[0].member_email]
                                     conn.query(memberLogUpdate, memberLogParam, function (error) {
                                         if (error) {
+                                            conn.rollback()
                                             console.error(error)
                                             res.status(500).json({
                                                 content: "DB Error"
@@ -523,12 +567,15 @@ app.post("/login", (req, res) => {
                                     let memberLoginLogParam = [rows[0].member_email, today]
                                     conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
                                         if (error) {
+                                            conn.rollback()
                                             console.error(error)
                                             res.status(500).json({
                                                 content: "DB Error"
                                             })
-                                        } else
+                                        } else {
+                                            conn.commit()
                                             console.log("insert query is executed.")
+                                        }
                                     })
 
                                     // TODO 메인 페이지로 이동
@@ -595,13 +642,16 @@ app.delete("/secede", (req, res) => {
                         if (sessionEmail === rows[0].member_email) {
                             let updateSql = "update member set member_secede = ? where member_email = ?;"
                             let updateParam = [1, rows[0].member_email]
+                            conn.beginTransaction()
                             conn.query(updateSql, updateParam, function (error, rows) {
                                 if (error) {
+                                    conn.rollback()
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
                                     })
                                 } else {
+                                    conn.commit()
                                     console.log("update query is executed.")
                                     req.session.destroy()
                                     // TODO 메인 페이지로 이동
@@ -657,8 +707,10 @@ app.post("/pw/find", (req, res) => {
                                 let tomorrow = moment(new Date().setDate(new Date().getDate() + 1)).format("YYYY-MM-DD HH:mm:ss")
                                 let insertSql = "insert into pw_find(pw_key, pw_edit, pw_date, pw_dispose, member_email) values(" + conn.escape(key) + ", " + conn.escape(0) + ", "
                                     + conn.escape(tomorrow) + ", " + conn.escape(0) + ", " + conn.escape(rows[0].member_email) + ");"
+                                conn.beginTransaction()
                                 conn.query(insertSql, function (error, rows) {
                                     if (error) {
+                                        conn.rollback()
                                         console.error(error)
                                         res.status(500).json({
                                             content: "DB Error"
@@ -670,11 +722,14 @@ app.post("/pw/find", (req, res) => {
                                 let urlPassword = "http://152.67.193.89:3000/member/pw/reset-redirect?pw_key=" + key
                                 func.sendEmail(isEmail, urlPassword, "[idea platform] Regarding email authentication.").then(mailContents => {
                                     transporter.sendMail(mailContents, function (error, info) {
-                                        if (error)
+                                        if (error) {
+                                            conn.rollback()
                                             res.status(401).json({
                                                 content: "Mail error"
                                             })
+                                        }
                                         else {
+                                            conn.commit()
                                             // 이메일 인증 코드 전송 완료.
                                             res.status(200).json({
                                                 content: true
@@ -739,13 +794,16 @@ app.get('/pw/reset-redirect', (req, res) => {
                                 if (rows[0].pw_date < today) {
                                     let updateDispose = "update pw_find set pw_dispose = ? where pw_key = ?"
                                     let updateParam = [1, rows[0].pw_key]
+                                    conn.beginTransaction()
                                     conn.query(updateDispose, updateParam, function (error, rows) {
                                         if (error) {
+                                            conn.rollback()
                                             console.error(error)
                                             res.status(500).json({
                                                 content: "DB Error"
                                             })
                                         } else {
+                                            conn.commit()
                                             console.log("pw_dispose update")
                                             res.status(401).json({
                                                 content: false
@@ -831,8 +889,10 @@ app.patch("/pw/reset", (req, res) => {
                                             let tempEmail = rows[0].member_email
                                             let memberUpdateSql = "update member set member_pw = ?, member_salt = ? where member_email = ?;"
                                             let memberUpdateParam = [encryptedNewPw, salt, tempEmail]
+                                            conn.beginTransaction()
                                             conn.query(memberUpdateSql, memberUpdateParam, function (error, rows) {
                                                 if (error) {
+                                                    conn.rollback()
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -849,6 +909,7 @@ app.patch("/pw/reset", (req, res) => {
                                             let pwUpdateParam = [1, 1, pwKey]
                                             conn.query(pwUpdateSql, pwUpdateParam, function (error, rows) {
                                                 if (error) {
+                                                    conn.rollback()
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
@@ -857,10 +918,14 @@ app.patch("/pw/reset", (req, res) => {
                                                     console.log("update pw log query is executed.")
                                                     delete req.session.pwKey
                                                     req.session.save(function (err) {
-                                                        if (err)
+                                                        if (err) {
+                                                            conn.rollback()
                                                             res.status(500).json({
                                                                 content: "Session Error"
                                                             })
+                                                        } else {
+                                                            conn.commit()
+                                                        }
                                                     })
                                                 }
                                             })
@@ -952,8 +1017,10 @@ app.patch("/update-detail", (req, res) => {
                 crypto.encryption(memberPhone).then(encryptedPhone => {
                     updateParam = [memberName, encryptedPw, memberSex, memberBirth, encryptedPhone, memberCompany, memberState, salt, memberEmail]
                     getConnection((conn) => {
+                        conn.beginTransaction()
                         conn.query(updateSql, updateParam, function (error, rows) {
                             if (error) {
+                                conn.rollback()
                                 console.error(error)
                                 res.status(500).json({
                                     content: "DB Error"
@@ -961,15 +1028,19 @@ app.patch("/update-detail", (req, res) => {
                             } else {
                                 req.session.member_pw = encryptedPw
                                 req.session.save(function (err) {
-                                    if (err)
+                                    if (err) {
+                                        conn.rollback()
                                         res.status(500).json({
                                             content: "Session Error"
                                         })
-                                    else
+                                    }
+                                    else {
+                                        conn.commit()
                                         // TODO 마이페이지로 redirect.
                                         res.status(201).json({
                                             content: true
                                         })
+                                    }
                                 })
                             }
                             conn.release()

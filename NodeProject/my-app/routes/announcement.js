@@ -446,13 +446,16 @@ app.patch("/mark", (req, res) => {
                                                         // 즐겨찾기 등록
                                                         let insertMarkSql = "insert into inter_anno(member_email, anno_id) values(?, ?);"
                                                         let insertMarkParam = [req.session.member_email, req.body.anno_id]
+                                                        conn.beginTransaction()
                                                         conn.query(insertMarkSql, insertMarkParam, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -464,13 +467,16 @@ app.patch("/mark", (req, res) => {
                                                     if (req.body.marked_flag === 0) {
                                                         let deleteMarkSql = "delete from inter_anno where member_email = ? and anno_id = ?"
                                                         let deleteMarkParam = [req.session.member_email, req.body.anno_id]
+                                                        conn.beginTransaction()
                                                         conn.query(deleteMarkSql, deleteMarkParam, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 console.error(error)
                                                                 res.status(500).json({
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })

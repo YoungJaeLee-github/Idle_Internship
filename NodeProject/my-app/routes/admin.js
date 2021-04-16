@@ -439,7 +439,6 @@ app.post("/signup", (req, res) => {
                                                         content: "Session Error"
                                                     })
                                                 } else {
-                                                    conn.commit()
                                                     // TODO 메인 페이지로 redirect
                                                     res.status(200).json({
                                                         content: true
@@ -450,7 +449,6 @@ app.post("/signup", (req, res) => {
                                     })
 
                                     // log
-                                    conn.beginTransaction()
                                     conn.query(insertLogSql, insertLogParam, function (error) {
                                         if (error) {
                                             conn.rollback()
@@ -487,7 +485,6 @@ app.post("/signup", (req, res) => {
                                                         })
                                                     } else {
                                                         // TODO 메인 페이지로 redirect
-                                                        conn.commit()
                                                         res.status(200).json({
                                                             content: true
                                                         })
@@ -497,7 +494,6 @@ app.post("/signup", (req, res) => {
                                         })
 
                                         // log
-                                        conn.beginTransaction()
                                         conn.query(insertLogSql, insertLogParam, function (error) {
                                             if (error) {
                                                 conn.rollback()
@@ -511,7 +507,6 @@ app.post("/signup", (req, res) => {
                                             }
                                         })
                                     } else {
-                                        conn.rollback()
                                         // 이미 가입 되어 있는 회원.
                                         res.status(401).json({
                                             content: "already exists."
@@ -519,15 +514,12 @@ app.post("/signup", (req, res) => {
                                     }
                                 }
                             }).catch(error => {
-                                conn.rollback()
                                 console.error(error)
                             })
                         }).catch(error => {
-                            conn.rollback()
                             console.error(error)
                         })
                     }).catch(error => {
-                        conn.rollback()
                         console.error(error)
                     })
                 }
@@ -572,10 +564,12 @@ app.post("/login", (req, res) => {
                         else {
                             crypto.encryptByHash(adminPw, rows[0].admin_salt).then(encryptedPw => {
                                 if (encryptedPw === rows[0].admin_pw) {
+                                    conn.beginTransaction()
                                     req.session.admin_email = adminEmail
                                     req.session.admin_pw = encryptedPw
                                     req.session.save(function (error) {
                                         if (error) {
+                                            conn.rollback()
                                             res.status(500).json({
                                                 content: "Session Error"
                                             })
@@ -586,7 +580,6 @@ app.post("/login", (req, res) => {
                                             })
                                         }
                                     })
-                                    conn.beginTransaction()
                                     let updateLogSql = "update admin_log set admin_login_lately = ? where admin_email = ?;"
                                     let updateLogParam = [moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail]
                                     conn.query(updateLogSql, updateLogParam, function (error) {
@@ -692,13 +685,11 @@ app.delete("/secede", (req, res) => {
                                                     }
                                                 })
                                             } else {
-                                                conn.rollback()
                                                 res.status(401).json({
                                                     content: false
                                                 })
                                             }
                                         }).catch(error => {
-                                            conn.rollback()
                                             console.error(error)
                                         })
                                     }
@@ -775,15 +766,18 @@ app.patch("/member-ban", (req, res) => {
                                                         let emailCheckValue = func.emailCheck(rows.length === 0 ? null : rows[0].member_email)
                                                         // 처음 정지 될 때
                                                         if (emailCheckValue === 200) {
+                                                            conn.beginTransaction()
                                                             let insertBanSql = "insert into member_ban(member_email, member_ban_reason, member_ban_date, admin_email) values(?, ? ,?, ?);"
                                                             let insertBanParam = [todoBanMemberEmail, banReason, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail]
                                                             conn.query(insertBanSql, insertBanParam, function (error) {
                                                                 if (error) {
+                                                                    conn.rollback()
                                                                     console.error(error)
                                                                     res.status(500).json({
                                                                         content: "DB Error"
                                                                     })
                                                                 } else {
+                                                                    conn.commit()
                                                                     console.log("insert ban success.")
                                                                 }
                                                             })
@@ -824,13 +818,11 @@ app.patch("/member-ban", (req, res) => {
                                                     }
                                                 })
                                             } else {
-                                                conn.rollback()
                                                 res.status(401).json({
                                                     content: false
                                                 })
                                             }
                                         }).catch(error => {
-                                            conn.rollback()
                                             console.error(error)
                                         })
                                     }
@@ -899,9 +891,10 @@ app.patch("/member-ban-release", (req, res) => {
                                                 let updateBanLogParam = [releaseReason, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), adminEmail, todoReleaseEmail]
                                                 let updateBanSql = "update member set member_ban = ? where member_email = ?"
                                                 let updateBanParam = [0, todoReleaseEmail]
-
+                                                conn.beginTransaction()
                                                 conn.query(updateBanLogSql, updateBanLogParam, function (error) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -913,11 +906,13 @@ app.patch("/member-ban-release", (req, res) => {
 
                                                 conn.query(updateBanSql, updateBanParam, function (error) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
+                                                        conn.commit()
                                                         res.status(200).json({
                                                             content: true
                                                         })
@@ -1008,13 +1003,16 @@ app.delete("/idea/remove", (req, res) => {
                                                     conn.escape(originalPoint) + ");"
                                                 totalSql += " update member set member_point = " + conn.escape(todoAddMemberPoint) + ", save_point = " +
                                                     conn.escape(todoAddSavePoint) + " where member_email = " + conn.escape(memberEmail) + ";"
+                                                conn.beginTransaction()
                                                 conn.query(totalSql, function (error) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
+                                                        conn.commit()
                                                         console.log("success remove idea.")
                                                         res.status(200).json({
                                                             content: true
@@ -1086,14 +1084,17 @@ app.patch("/point/give", (req, res) => {
                                         else {
                                             let updateIdeaPointSql = "update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?"
                                             let updateIdeaPointParam = [req.session.admin_email, givePoint + originalPoint, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), ideaId]
+                                            conn.beginTransaction()
                                             conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows) {
                                                 if (error) {
+                                                    conn.rollback()
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
                                                     })
-                                                } else
+                                                } else {
                                                     console.log("Success give point.")
+                                                }
                                             })
 
                                             let updatePointSql = "update member set member_point = ?, save_point = ? where member_email = (select member_email from idea where idea_id = ?)"
@@ -1102,11 +1103,13 @@ app.patch("/point/give", (req, res) => {
                                             let updatePointParam = [todoAddMemberPoint, todoAddSavePoint, ideaId]
                                             conn.query(updatePointSql, updatePointParam, function (error, rows) {
                                                 if (error) {
+                                                    conn.rollback()
                                                     console.error(error)
                                                     res.status(500).json({
                                                         content: "DB Error"
                                                     })
                                                 } else {
+                                                    conn.commit()
                                                     console.log("Success update member point")
                                                     res.status(200).json({
                                                         content: true
@@ -1182,20 +1185,24 @@ app.patch("/point/cancel", (req, res) => {
                                             else {
                                                 let updateIdeaPointSql = "update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?;"
                                                 let updateIdeaPointParam = [req.session.admin_email, originalPoint - req.body.cancel_point, moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), ideaId]
+                                                conn.beginTransaction()
                                                 conn.query(updateIdeaPointSql, updateIdeaPointParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
-                                                    } else
+                                                    } else {
                                                         console.log("Success update idea point.")
+                                                    }
                                                 })
                                                 // point 테이블 insert.
                                                 let insertPointSql = "insert into point (member_email, use_date, use_contents, point) values((select member_email from idea where idea_id = ?), ?, ?, ?);"
                                                 let insertPointParam = [ideaId, moment(new Date()).format("YYYY-MM-DD"), "회수", req.body.cancel_point]
                                                 conn.query(insertPointSql, insertPointParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
@@ -1211,11 +1218,13 @@ app.patch("/point/cancel", (req, res) => {
                                                 let updateMemberPointParam = [todoAddMemberPoint, todoAddSavePoint, ideaId]
                                                 conn.query(updateMemberPointSql, updateMemberPointParam, function (error, rows) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
+                                                        conn.commit()
                                                         console.log(("Success update member point."))
                                                         res.status(200).json({
                                                             content: true
@@ -1290,8 +1299,10 @@ app.post("/notice/regist", upload.any(), (req, res) => {
         getConnection((conn) => {
             let insertNoticeSql = "insert into notice(notice_title, notice_contents, notice_date, admin_email, notice_delete) values(" + conn.escape(req.body.notice_title)
                 + ", " + conn.escape(req.body.notice_contents) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD")) + ", " + conn.escape(req.session.admin_email) + ", " + conn.escape(0) + ");"
+            conn.beginTransaction()
             conn.query(insertNoticeSql, function (error) {
                 if (error) {
+                    conn.rollback()
                     for (let i = 0; i < req.files.length; i++) {
                         fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                     }
@@ -1301,6 +1312,7 @@ app.post("/notice/regist", upload.any(), (req, res) => {
                     })
                 } else {
                     if (Object.keys(req.files).length === 0) {
+                        conn.commit()
                         console.log("insert notice success.")
                         res.status(200).json({
                             content: true
@@ -1313,6 +1325,7 @@ app.post("/notice/regist", upload.any(), (req, res) => {
                                 " order by notice_id desc limit " + conn.escape(1) + "));"
                         conn.query(insertFileSql, function (error) {
                             if (error) {
+                                conn.rollback()
                                 for (let i = 0; i < req.files.length; i++) {
                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                 }
@@ -1321,6 +1334,7 @@ app.post("/notice/regist", upload.any(), (req, res) => {
                                     content: "DB Error"
                                 })
                             } else {
+                                conn.commit()
                                 console.log("insert notice & file success.")
                                 res.status(200).json({
                                     content: true
@@ -1407,8 +1421,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
                                                             + "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " +
                                                             conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.admin_email) + ");"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1417,6 +1433,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1433,8 +1450,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             " where notice_id = " + conn.escape(req.body.notice_id) +
                                                             "; insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) +
                                                             ", " + conn.escape(req.session.admin_email) + ");"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1443,6 +1462,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1472,8 +1492,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         }
                                                         editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id)
                                                             + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.email) + ");"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1482,6 +1504,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1504,9 +1527,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         }
                                                         editTotalSql += "insert into notice_log(notice_id, notice_edit_date, edit_admin_email) values(" + conn.escape(req.body.notice_id) +
                                                             ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", " + conn.escape(req.session.admin_email) + ");"
-
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1515,6 +1539,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1544,8 +1569,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             ", notice_contents = " + conn.escape(req.body.notice_contents) + " where notice_id = " + conn.escape(req.body.notice_id)
                                                             + "; update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1554,6 +1581,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1570,8 +1598,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                             " where notice_id = " + conn.escape(req.body.notice_id) +
                                                             "; update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1580,6 +1610,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1609,8 +1640,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         }
                                                         editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1619,6 +1652,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1642,8 +1676,10 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                         editTotalSql += "update notice_log set notice_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ", edit_admin_email = " + conn.escape(req.session.admin_email)
                                                             + " where notice_id = " + conn.escape(req.body.notice_id) + ";"
 
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -1652,6 +1688,7 @@ app.patch("/notice/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -1702,13 +1739,16 @@ app.delete("/notice/remove", (req, res) => {
                         else {
                             let deleteNoticeSql = "update notice set notice_delete = ? where notice_id = ?"
                             let deleteNoticeParam = [1, req.body.notice_id]
+                            conn.beginTransaction()
                             conn.query(deleteNoticeSql, deleteNoticeParam, function (error) {
                                 if (error) {
+                                    conn.rollback()
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
                                     })
                                 } else {
+                                    conn.commit()
                                     console.log("Success Delete notice")
                                     res.status(200).json({
                                         content: true
@@ -1755,13 +1795,16 @@ app.post("/cs/resp/regist", (req, res) => {
                         } else {
                             let updateCsRespSql = "update cs set admin_email = ?, cs_resp = ?, cs_resp_date = ? where cs_id = ?"
                             let updateCsRespParam = [req.session.admin_email, '첫 번째 답변 입니다.', moment(new Date()).format("YYYY-MM-DD"), req.body.cs_id]
+                            conn.beginTransaction()
                             conn.query(updateCsRespSql, updateCsRespParam, function (error) {
                                 if (error) {
+                                    conn.rollback()
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
                                     })
                                 } else {
+                                    conn.commit()
                                     console.log("Success update cs response.")
                                     res.status(200).json({
                                         content: true
@@ -1806,13 +1849,16 @@ app.delete("/cs/remove", (req, res) => {
                         else {
                             let deleteCsSql = "update cs set cs_delete = ? where cs_id = ?"
                             let deleteCsParam = [1, req.body.cs_id]
+                            conn.beginTransaction()
                             conn.query(deleteCsSql, deleteCsParam, function (error) {
                                 if (error) {
+                                    conn.rollback()
                                     console.error(error)
                                     res.status(500).json({
                                         content: "DB Error"
                                     })
                                 } else {
+                                    conn.commit()
                                     console.log("Success Delete cs")
                                     res.status(200).json({
                                         content: true
@@ -3691,13 +3737,16 @@ app.post("/contact/resp", (req, res) => {
                             content: false
                         })
                     else {
+                        conn.beginTransaction()
                         let senderEmail = rows[0].email
                         func.sendEmail(senderEmail, req.body.contact_resp_contents, req.body.contact_resp_title).then(mailContents => {
                             transporter.sendMail(mailContents, function (error, info) {
-                                if (error)
+                                if (error) {
+                                    conn.rollback()
                                     res.status(500).json({
                                         content: "Mail Error"
                                     })
+                                }
                                 else
                                     console.log(info.response)
                             })
@@ -3706,11 +3755,13 @@ app.post("/contact/resp", (req, res) => {
                         let updateContactRespParam = [moment(new Date()).format("YYYY-MM-DD HH:mm:ss"), req.session.admin_email, req.body.contact_id]
                         conn.query(updateContactRespSql, updateContactRespParam, function (error) {
                             if (error) {
+                                conn.rollback()
                                 console.error(error)
                                 res.status(500).json({
                                     content: "DB Error"
                                 })
                             } else {
+                                conn.commit()
                                 console.log("Success Contact Response Update.")
                                 res.status(200).json({
                                     content: true
@@ -4235,13 +4286,16 @@ app.patch("/point/use-point", (req, res) => {
                                                     " and accept_flag is not null and accept_flag != " + conn.escape(1) + ";"
                                                 updatePointSql += "update member set member_point = " + conn.escape(rows[0].save_point - (rows[0].use_point + req.body.use_point)) +
                                                     ", use_point = " + conn.escape(rows[0].use_point + req.body.use_point) + " where member_email = " + conn.escape(rows[0].member_email) + ";"
+                                                conn.beginTransaction()
                                                 conn.query(updatePointSql, function (error) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
+                                                        conn.commit()
                                                         res.status(200).json({
                                                             content: true
                                                         })

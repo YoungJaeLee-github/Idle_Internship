@@ -416,13 +416,16 @@ app.post("/use-point", (req, res) => {
                                             func.generateKey().then(useCode => {
                                                 let requestPointSql = "insert into point(member_email, use_date, use_contents, point, accept_flag, use_code) values(?, ?, ?, ?, ?, ?);"
                                                 let requestPointParam = [req.session.member_email, moment(new Date()).format("YYYY-MM-DD"), "사용", 500, 0, useCode]
+                                                conn.beginTransaction()
                                                 conn.query(requestPointSql, requestPointParam, function (error) {
                                                     if (error) {
+                                                        conn.rollback()
                                                         console.error(error)
                                                         res.status(500).json({
                                                             content: "DB Error"
                                                         })
                                                     } else {
+                                                        conn.commit()
                                                         res.status(200).json({
                                                             content: true
                                                         })

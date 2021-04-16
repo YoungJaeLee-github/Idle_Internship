@@ -68,8 +68,10 @@ app.post("/regist", upload.any(), (req, res) => {
                             let insertCsSql = "insert into cs(cs_title, cs_contents, cs_date, member_email, cs_secret, cs_delete)" +
                                 "values(?, ?, ?, ?, ?, ?)"
                             let insertCsParam = [req.body.cs_title, req.body.cs_contents, moment(new Date()).format("YYYY-MM-DD"), req.session.member_email, req.body.cs_secret, 0]
+                            conn.beginTransaction()
                             conn.query(insertCsSql, insertCsParam, function (error) {
                                 if (error) {
+                                    conn.rollback()
                                     for (let i = 0; i < req.files.length; i++) {
                                         fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                     }
@@ -79,6 +81,7 @@ app.post("/regist", upload.any(), (req, res) => {
                                     })
                                 } else {
                                     if (Object.keys(req.files).length === 0) {
+                                        conn.commit()
                                         console.log("insert cs success.")
                                         res.status(200).json({
                                             content: true
@@ -92,6 +95,7 @@ app.post("/regist", upload.any(), (req, res) => {
                                         }
                                         conn.query(insertFileSql, function (error) {
                                             if (error) {
+                                                conn.rollback()
                                                 for (let i = 0; i < req.files.length; i++) {
                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                 }
@@ -100,6 +104,7 @@ app.post("/regist", upload.any(), (req, res) => {
                                                     content: "DB Error"
                                                 })
                                             } else {
+                                                conn.commit()
                                                 console.log("insert cs & file success.")
                                                 res.status(200).json({
                                                     content: true
@@ -578,8 +583,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             ", cs_contents = " + conn.escape(req.body.cs_contents) + ", cs_secret = " + conn.escape(req.body.cs_secret) + " where cs_id = " + conn.escape(req.body.cs_id)
                                                             + "; insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id) + ", " +
                                                             conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -588,6 +595,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -604,8 +612,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             ", cs_secret = " + conn.escape(req.body.cs_secret) +
                                                             " where cs_id = " + conn.escape(req.body.cs_id) +
                                                             "; insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id) + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -614,6 +624,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -644,8 +655,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         }
                                                         editTotalSql += "insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id)
                                                             + ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -654,6 +667,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -677,9 +691,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         }
                                                         editTotalSql += "insert into cs_log(cs_id, cs_edit_date) values(" + conn.escape(req.body.cs_id) +
                                                             ", " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss")) + ");"
-
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -688,6 +703,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -719,8 +735,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             " where cs_id = " + conn.escape(req.body.cs_id)
                                                             + "; update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -729,6 +747,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -746,8 +765,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                             " where cs_id = " + conn.escape(req.body.cs_id) +
                                                             "; update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -756,6 +777,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -787,8 +809,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         }
                                                         editTotalSql += "update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -797,6 +821,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
@@ -822,8 +847,10 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                         editTotalSql += "update cs_log set cs_edit_date = " + conn.escape(moment(new Date()).format("YYYY-MM-DD HH:mm:ss"))
                                                             + " where cs_id = " + conn.escape(req.body.cs_id) + ";"
 
+                                                        conn.beginTransaction()
                                                         conn.query(editTotalSql, function (error) {
                                                             if (error) {
+                                                                conn.rollback()
                                                                 for (let i = 0; i < req.files.length; i++) {
                                                                     fs.unlink(req.files[i].path, (error) => error ? console.error(error) : console.log("Success delete file"))
                                                                 }
@@ -832,6 +859,7 @@ app.patch("/edit", upload.any(), (req, res) => {
                                                                     content: "DB Error"
                                                                 })
                                                             } else {
+                                                                conn.commit()
                                                                 res.status(200).json({
                                                                     content: true
                                                                 })
