@@ -307,7 +307,7 @@ cron.schedule("01 00 * * *", async function () {
 // 1. 사용자 조회
 app.post("/member-check", (req, res) => {
     let checkEmail = req.body.member_email
-    if (checkEmail === undefined) {
+    if (checkEmail === undefined || req.session.admin_email === undefined) {
         res.status(401).json({
             content: false
         })
