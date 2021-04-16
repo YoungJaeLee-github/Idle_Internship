@@ -27,7 +27,7 @@ app.use(sessionConfig.init())
  * Rank Scheduler 00 00 * * 1 매주 월요일 00 시 00분.
  * --------------------------------------------------------------------------------------------------------
  */
-cron.schedule("37 11 * * *", function () {
+cron.schedule("00 00 * * 1", function () {
     console.log("ranking...")
     // 정지 여부, 탈퇴 여부, 포인트 조회 후 정렬
     let searchPointSql = "select member_email, save_point, member_log_join\n" +
@@ -250,7 +250,7 @@ async function contentsCrawling(page) {
     })
 }
 
-cron.schedule("33 11 * * *", async function () {
+cron.schedule("00 00 * * *", async function () {
     console.log("list Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
@@ -272,7 +272,7 @@ cron.schedule("33 11 * * *", async function () {
     timezone: "Asia/Seoul"
 })
 
-cron.schedule("34 11 * * *", async function () {
+cron.schedule("01 00 * * *", async function () {
     console.log("Contents Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
