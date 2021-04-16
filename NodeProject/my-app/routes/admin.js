@@ -27,7 +27,7 @@ app.use(sessionConfig.init())
  * Rank Scheduler 00 00 * * 1 매주 월요일 00 시 00분.
  * --------------------------------------------------------------------------------------------------------
  */
-cron.schedule("32 11 * * 1", function () {
+cron.schedule("37 11 * * *", function () {
     console.log("ranking...")
     // 정지 여부, 탈퇴 여부, 포인트 조회 후 정렬
     let searchPointSql = "select member_email, save_point, member_log_join\n" +
