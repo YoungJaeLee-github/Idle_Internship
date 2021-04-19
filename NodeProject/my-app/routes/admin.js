@@ -250,7 +250,7 @@ async function contentsCrawling(page) {
     })
 }
 
-cron.schedule("00 00 * * *", async function () {
+cron.schedule("51 11 * * *", async function () {
     console.log("list Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
@@ -272,7 +272,7 @@ cron.schedule("00 00 * * *", async function () {
     timezone: "Asia/Seoul"
 })
 
-cron.schedule("01 00 * * *", async function () {
+cron.schedule("52 11 * * *", async function () {
     console.log("Contents Crawling Start.")
     const browser = await puppeteer.launch({
         headless: false,
