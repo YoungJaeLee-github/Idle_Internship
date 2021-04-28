@@ -3841,7 +3841,7 @@ app.post("/point/now", (req, res) => {
                                                         pointInfoStruct.push({
                                                             member_email: rows[0].member_email,
                                                             member_name: rows[0].member_name,
-                                                            member_rank: rows[0].member_rank,
+                                                            member_rank: rows[0].member_rank + "위",
                                                             member_point: rows[0].member_point,
                                                             save_point: rows[0].save_point,
                                                             use_point: rows[0].use_point

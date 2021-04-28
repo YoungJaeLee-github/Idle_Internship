@@ -66,7 +66,7 @@ app.get("/now", (req, res) => {
                                     } else {
                                         let pointInfoStruct = []
                                         pointInfoStruct.push({
-                                            member_rank: rows[0].member_rank,
+                                            member_rank: rows[0].member_rank + "위",
                                             member_point: rows[0].member_point,
                                             save_point: rows[0].save_point,
                                             use_point: rows[0].use_point
