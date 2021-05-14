@@ -13,6 +13,7 @@ const func = require("../common/function.js")
 const getConnection = require("../config/database_config.js").getConnection
 const logger = require("../config/winston_config.js").logger
 const moment = require("moment")
+const jwt = require("../common/jwt.js")
 require("moment-timezone")
 moment.tz.setDefault("Asia/Seoul")
 app.use(sessionConfig.init())
@@ -332,18 +333,18 @@ app.post("/signup", (req, res) => {
                                                             content: "DB Error"
                                                         })
                                                     } else {
-                                                        req.session.member_email = tempEmail
-                                                        req.session.member_pw = encryptedPw
-                                                        req.session.save(function (error) {
-                                                            if (error) {
-                                                                conn.rollback()
-                                                                res.status(500).json({
-                                                                    content: "Session Error"
-                                                                })
-                                                            } else {
-                                                                console.log("Insert Into member Query is Executed.")
-                                                            }
-                                                        })
+                                                        // req.session.member_email = tempEmail
+                                                        // req.session.member_pw = encryptedPw
+                                                        // req.session.save(function (error) {
+                                                        //     if (error) {
+                                                        //         conn.rollback()
+                                                        //         res.status(500).json({
+                                                        //             content: "Session Error"
+                                                        //         })
+                                                        //     } else {
+                                                        //         console.log("Insert Into member Query is Executed.")
+                                                        //     }
+                                                        // })
 
                                                         delete req.session.auth_key
                                                         req.session.save(function (error) {
@@ -408,16 +409,16 @@ app.post("/signup", (req, res) => {
                                                             content: "DB Error"
                                                         })
                                                     } else {
-                                                        req.session.member_email = newEmail
-                                                        req.session.member_pw = encryptedPw
-                                                        req.session.save(function (error) {
-                                                            if (error)
-                                                                res.status(500).json({
-                                                                    content: "Session Error"
-                                                                })
-                                                            else
-                                                                console.log("update query is executed.")
-                                                        })
+                                                        // req.session.member_email = newEmail
+                                                        // req.session.member_pw = encryptedPw
+                                                        // req.session.save(function (error) {
+                                                        //     if (error)
+                                                        //         res.status(500).json({
+                                                        //             content: "Session Error"
+                                                        //         })
+                                                        //     else
+                                                        //         console.log("update query is executed.")
+                                                        // })
 
                                                         delete req.session.auth_key
                                                         req.session.save(function (error) {
@@ -537,51 +538,64 @@ app.post("/login", (req, res) => {
                                 // 입력한 비밀번호 해시 암호화 한 값과 회원 테이블에 해당 이메일의 비밀번호 값 비교 및 정지여부 확인.
                                 conn.beginTransaction()
                                 if (memberPw === rows[0].member_pw) {
-                                    req.session.member_email = rows[0].member_email
-                                    req.session.member_pw = rows[0].member_pw
-                                    req.session.save(function (error) {
-                                        if (error) {
-                                            conn.rollback()
-                                            res.status(500).json({
-                                                content: "Session Error"
-                                            })
-                                        }
-                                    })
+                                    // req.session.member_email = rows[0].member_email
+                                    // req.session.member_pw = rows[0].member_pw
+                                    // req.session.save(function (error) {
+                                    //     if (error) {
+                                    //         conn.rollback()
+                                    //         res.status(500).json({
+                                    //             content: "Session Error"
+                                    //         })
+                                    //     }
+                                    // })
+                                    const user = {
+                                        email: rows[0].member_email
+                                    }
 
-                                    let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
-                                    let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
-                                    let memberLogParam = [today, rows[0].member_email]
-                                    conn.query(memberLogUpdate, memberLogParam, function (error) {
-                                        if (error) {
-                                            conn.rollback()
-                                            console.error(error)
-                                            res.status(500).json({
-                                                content: "DB Error"
-                                            })
-                                        } else
-                                            console.log("update query is executed.")
-                                    })
+                                    let accessToken
+                                    let refreshToken
+                                    jwt.sign(user).then(result => {
+                                        accessToken = result.access_token
+                                        refreshToken = result.refresh_token
 
-                                    let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
-                                    let memberLoginLogParam = [rows[0].member_email, today]
-                                    conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
-                                        if (error) {
-                                            conn.rollback()
-                                            console.error(error)
-                                            res.status(500).json({
-                                                content: "DB Error"
-                                            })
-                                        } else {
-                                            conn.commit()
-                                            console.log("insert query is executed.")
-                                        }
-                                    })
+                                        let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
+                                        let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
+                                        let memberLogParam = [today, rows[0].member_email]
+                                        conn.query(memberLogUpdate, memberLogParam, function (error) {
+                                            if (error) {
+                                                conn.rollback()
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else
+                                                console.log("update query is executed.")
+                                        })
 
-                                    // TODO 메인 페이지로 이동
-                                    res.status(200).json({
-                                        content: true
-                                    })
+                                        let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
+                                        let memberLoginLogParam = [rows[0].member_email, today]
+                                        conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
+                                            if (error) {
+                                                conn.rollback()
+                                                console.error(error)
+                                                res.status(500).json({
+                                                    content: "DB Error"
+                                                })
+                                            } else {
+                                                conn.commit()
+                                                console.log("insert query is executed.")
+                                            }
+                                        })
 
+                                        // TODO 메인 페이지로 이동
+                                        res.status(200).json({
+                                            content: true,
+                                            access_token: accessToken,
+                                            refresh_token: refreshToken
+                                        })
+                                    }).catch(error => {
+                                        console.error(error)
+                                    })
                                 } else {
                                     // TODO 로그인 실패(비밀번호가 틀린 경우). 다시 로그인 화면으로 redirect
                                     res.status(401).json({
