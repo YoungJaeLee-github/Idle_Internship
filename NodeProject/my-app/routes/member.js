@@ -14,6 +14,8 @@ const getConnection = require("../config/database_config.js").getConnection
 const logger = require("../config/winston_config.js").logger
 const moment = require("moment")
 const jwt = require("../common/jwt.js")
+const TOKEN_EXPIRED = -3
+const TOKEN_INVALID = -2
 require("moment-timezone")
 moment.tz.setDefault("Asia/Seoul")
 app.use(sessionConfig.init())
@@ -333,65 +335,83 @@ app.post("/signup", (req, res) => {
                                                             content: "DB Error"
                                                         })
                                                     } else {
-                                                        // req.session.member_email = tempEmail
-                                                        // req.session.member_pw = encryptedPw
-                                                        // req.session.save(function (error) {
-                                                        //     if (error) {
-                                                        //         conn.rollback()
-                                                        //         res.status(500).json({
-                                                        //             content: "Session Error"
-                                                        //         })
-                                                        //     } else {
-                                                        //         console.log("Insert Into member Query is Executed.")
-                                                        //     }
-                                                        // })
+                                                        // JWT Token 발급.
+                                                        const user = {
+                                                            email: tempEmail
+                                                        }
+                                                        let accessToken, refreshToken
 
-                                                        delete req.session.auth_key
-                                                        req.session.save(function (error) {
-                                                            if (error) {
-                                                                conn.rollback()
-                                                                res.status(500).json({
-                                                                    content: "Session Error"
-                                                                })
-                                                            } else {
-                                                                console.log("delete session auth key.")
-                                                                // TODO 메인 페이지로 redirect
-                                                                res.status(200).json({
-                                                                    content: true
-                                                                })
-                                                            }
-                                                        })
-                                                    }
-                                                })
+                                                        jwt.sign(user).then(result => {
+                                                            accessToken = result.access_token
+                                                            refreshToken = result.refresh_token
 
-                                                // log 추가.
-                                                let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
-                                                let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
-                                                let memberLogInsertParam = [tempEmail, today, today]
-                                                conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
-                                                    if (error) {
-                                                        conn.rollback()
-                                                        console.error(error)
-                                                        res.status(500).json({
-                                                            content: "DB Error"
-                                                        })
-                                                    } else
-                                                        console.log("Success.")
-                                                })
+                                                            // Server DataBase에 Refresh Token 저장.
+                                                            let insertRefreshTokenSql = "insert into member_refresh_token(member_email, member_refresh_token) values(?, ?);"
+                                                            let insertRefreshTokenParam = [tempEmail, refreshToken]
+                                                            conn.query(insertRefreshTokenSql, insertRefreshTokenParam, function (error) {
+                                                                if (error) {
+                                                                    conn.rollback()
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else {
+                                                                    console.log("Success.")
+                                                                }
+                                                            })
 
-                                                // log 추가.
-                                                let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
-                                                let memberLoginLogParam = [tempEmail, today]
-                                                conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
-                                                    if (error) {
-                                                        conn.rollback()
-                                                        console.error(error)
-                                                        res.status(500).json({
-                                                            content: "DB Error"
+                                                            // log 추가.
+                                                            let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
+                                                            let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
+                                                            let memberLogInsertParam = [tempEmail, today, today]
+                                                            conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
+                                                                if (error) {
+                                                                    conn.rollback()
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else
+                                                                    console.log("Success.")
+                                                            })
+
+                                                            // log 추가.
+                                                            let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
+                                                            let memberLoginLogParam = [tempEmail, today]
+                                                            conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
+                                                                if (error) {
+                                                                    conn.rollback()
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else {
+                                                                    console.log("Success.")
+                                                                }
+                                                            })
+
+                                                            delete req.session.auth_key
+                                                            req.session.save(function (error) {
+                                                                if (error) {
+                                                                    conn.rollback()
+                                                                    res.status(500).json({
+                                                                        content: "Session Error"
+                                                                    })
+                                                                } else {
+                                                                    console.log("delete session auth key.")
+                                                                    conn.commit()
+                                                                    // TODO 메인 페이지로 redirect
+                                                                    res.status(200).json({
+                                                                        content: true,
+                                                                        access_token: accessToken,
+                                                                        refresh_token: refreshToken
+                                                                    })
+                                                                }
+                                                            })
+                                                        }).catch(error => {
+                                                            conn.rollback()
+                                                            console.error(error)
                                                         })
-                                                    } else {
-                                                        console.log("Success.")
-                                                        conn.commit()
                                                     }
                                                 })
                                             }
@@ -409,70 +429,83 @@ app.post("/signup", (req, res) => {
                                                             content: "DB Error"
                                                         })
                                                     } else {
-                                                        // req.session.member_email = newEmail
-                                                        // req.session.member_pw = encryptedPw
-                                                        // req.session.save(function (error) {
-                                                        //     if (error)
-                                                        //         res.status(500).json({
-                                                        //             content: "Session Error"
-                                                        //         })
-                                                        //     else
-                                                        //         console.log("update query is executed.")
-                                                        // })
+                                                        // JWT Token 발급
+                                                        const user = {
+                                                            email: newEmail
+                                                        }
+                                                        let accessToken, refreshToken
 
-                                                        delete req.session.auth_key
-                                                        req.session.save(function (error) {
-                                                            if (error)
-                                                                res.status(500).json({
-                                                                    content: "Session Error"
-                                                                })
-                                                            else {
-                                                                // TODO 메인 페이지로 redirect
-                                                                // res.redirect(307, "/")
-                                                                res.status(200).json({
-                                                                    content: true
-                                                                })
-                                                            }
-                                                        })
-                                                    }
-                                                })
+                                                        jwt.sign(user).then(result => {
+                                                            accessToken = result.access_token
+                                                            refreshToken = result.refresh_token
 
-                                                // log 추가.
-                                                let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
-                                                let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
-                                                let memberLogInsertParam = [newEmail, today, today]
-                                                conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
-                                                    if (error) {
-                                                        conn.rollback()
-                                                        console.error(error)
-                                                        res.status(500).json({
-                                                            content: "DB Error"
-                                                        })
-                                                    } else {
-                                                        // req.session.join_lately = today
-                                                        // req.session.save(function (err) {
-                                                        //     if (err)
-                                                        //         res.status(500).json({
-                                                        //             content: "Session Error"
-                                                        //         })
-                                                        // })
-                                                        console.log("Success.")
-                                                    }
-                                                })
+                                                            // Server DataBase에 Refresh Token 저장.
+                                                            let insertRefreshTokenSql = "insert into member_refresh_token(member_email, member_refresh_token) values(?, ?);"
+                                                            let insertRefreshTokenParam = [newEmail, refreshToken]
+                                                            conn.query(insertRefreshTokenSql, insertRefreshTokenParam, function (error) {
+                                                                if (error) {
+                                                                    conn.rollback()
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else {
+                                                                    console.log("Success.")
+                                                                }
+                                                            })
 
-                                                // log 추가.
-                                                let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
-                                                let memberLoginLogParam = [newEmail, today]
-                                                conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
-                                                    if (error) {
-                                                        conn.rollback()
-                                                        console.error(error)
-                                                        res.status(500).json({
-                                                            content: "DB Error"
+                                                            // log 추가.
+                                                            let memberLogInsert = "insert into member_log(member_email, member_log_join, member_login_lately) values(?, ?, ?);"
+                                                            let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
+                                                            let memberLogInsertParam = [newEmail, today, today]
+                                                            conn.query(memberLogInsert, memberLogInsertParam, function (error, rows) {
+                                                                if (error) {
+                                                                    conn.rollback()
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else {
+                                                                    console.log("Success.")
+                                                                }
+                                                            })
+
+                                                            // log 추가.
+                                                            let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
+                                                            let memberLoginLogParam = [newEmail, today]
+                                                            conn.query(memberLoginLogInsert, memberLoginLogParam, function (error, rows) {
+                                                                if (error) {
+                                                                    conn.rollback()
+                                                                    console.error(error)
+                                                                    res.status(500).json({
+                                                                        content: "DB Error"
+                                                                    })
+                                                                } else {
+                                                                    console.log("Success.")
+                                                                }
+                                                            })
+
+                                                            delete req.session.auth_key
+                                                            req.session.save(function (error) {
+                                                                if (error)
+                                                                    res.status(500).json({
+                                                                        content: "Session Error"
+                                                                    })
+                                                                else {
+                                                                    // TODO 메인 페이지로 redirect
+                                                                    // res.redirect(307, "/")
+                                                                    conn.commit()
+                                                                    res.status(200).json({
+                                                                        content: true,
+                                                                        access_token: accessToken,
+                                                                        refresh_token: refreshToken
+                                                                    })
+                                                                }
+                                                            })
+                                                        }).catch(error => {
+                                                            conn.rollback()
+                                                            console.error(error)
                                                         })
-                                                    } else {
-                                                        conn.commit()
-                                                        console.log("Success.")
                                                     }
                                                 })
                                             }
@@ -503,129 +536,380 @@ app.post("/signup", (req, res) => {
 
 // 5. 로그인
 app.post("/login", (req, res) => {
-    let memberEmail = req.body.member_email
-    let tempPw = req.body.member_pw
-    if (memberEmail === undefined || tempPw === undefined)
-        res.status(401).json({
-            content: false
-        })
-    else {
-        let selectSql = "select member_email, member_pw, member_ban, member_salt, member_secede from member where member_email = ?;"
-        let selectParam = [memberEmail]
-        getConnection((conn) => {
-            conn.query(selectSql, selectParam, function (error, rows) {
-                if (error) {
-                    console.error(error)
-                    res.status(500).json("DB Error")
-                } else {
-                    let isEmail = rows.length === 0 ? null : rows[0].member_email
-                    let memberCheckValue = func.emailCheck(isEmail)
-                    // 회원 테이블에 중복된 이메일이 없으면.
-                    if (memberCheckValue === 200)
-                        res.status(401).json({
-                            content: false
-                        })
-                    // 회원 테이블에 입력한 이메일이 있고 탈퇴 여부가 0이면(탈퇴하지 않았으면).
-                    else if (memberCheckValue === 401 && rows[0].member_secede === 0) {
-                        // 정지된 회원인 경우.
-                        if (rows[0].member_ban === 1)
-                            // TODO 로그인 실패(정지된 회원인 경우). 다시 로그인 화면으로 redirect
+
+    // 로그아웃 후 재 로그인 시.
+    if (req.headers.access_token === undefined && req.headers.refresh_token === undefined) {
+        // 이메일, 패스워드 파라미터가 없을 시 예외 처리.
+        let memberEmail = req.body.member_email
+        let tempPw = req.body.member_pw
+        if (memberEmail === undefined || tempPw === undefined) {
+            res.status(401).json({
+                content: false
+            })
+        } else {
+            // 정상적인 로그인.
+            let selectSql = "select member_email, member_pw, member_ban, member_salt, member_secede from member where member_email = ?;"
+            let selectParam = [memberEmail]
+            getConnection((conn) => {
+                conn.query(selectSql, selectParam, function (error, rows) {
+                    if (error) {
+                        console.error(error)
+                        res.status(500).json("DB Error")
+                    } else {
+                        let isEmail = rows.length === 0 ? null : rows[0].member_email
+                        let memberCheckValue = func.emailCheck(isEmail)
+                        // 회원 테이블에 중복된 이메일이 없으면.
+                        if (memberCheckValue === 200)
                             res.status(401).json({
                                 content: false
                             })
-                        else {
-                            crypto.encryptByHash(tempPw, rows[0].member_salt).then(memberPw => {
-                                // 입력한 비밀번호 해시 암호화 한 값과 회원 테이블에 해당 이메일의 비밀번호 값 비교 및 정지여부 확인.
-                                conn.beginTransaction()
-                                if (memberPw === rows[0].member_pw) {
-                                    // req.session.member_email = rows[0].member_email
-                                    // req.session.member_pw = rows[0].member_pw
-                                    // req.session.save(function (error) {
-                                    //     if (error) {
-                                    //         conn.rollback()
-                                    //         res.status(500).json({
-                                    //             content: "Session Error"
-                                    //         })
-                                    //     }
-                                    // })
-                                    const user = {
-                                        email: rows[0].member_email
+                        // 회원 테이블에 입력한 이메일이 있고 탈퇴 여부가 0이면(탈퇴하지 않았으면).
+                        else if (memberCheckValue === 401 && rows[0].member_secede === 0) {
+                            // 정지된 회원인 경우.
+                            if (rows[0].member_ban === 1)
+                                // TODO 로그인 실패(정지된 회원인 경우). 다시 로그인 화면으로 redirect
+                                res.status(401).json({
+                                    content: false
+                                })
+                            else {
+                                crypto.encryptByHash(tempPw, rows[0].member_salt).then(memberPw => {
+                                    // 입력한 비밀번호 해시 암호화 한 값과 회원 테이블에 해당 이메일의 비밀번호 값 비교 및 정지여부 확인.
+                                    conn.beginTransaction()
+                                    if (memberPw === rows[0].member_pw) {
+                                        // jwt 토큰 발급.
+                                        const user = {
+                                            email: rows[0].member_email
+                                        }
+                                        let accessToken, refreshToken
+
+                                        jwt.sign(user).then(result => {
+                                            accessToken = result.access_token
+                                            refreshToken = result.refresh_token
+
+                                            // refresh token Server DataBase에 저장.
+                                            let insertRefreshTokenSql = "insert into member_refresh_token(member_email, member_refresh_token) values(?, ?);"
+                                            let insertRefreshTokenParam = [rows[0].member_email, refreshToken]
+                                            conn.query(insertRefreshTokenSql, insertRefreshTokenParam, function (error) {
+                                                if (error) {
+                                                    conn.rollback()
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    console.log("Success.")
+                                                }
+                                            })
+
+                                            // 로그인 로그 update.
+                                            let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
+                                            let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
+                                            let memberLogParam = [today, rows[0].member_email]
+                                            conn.query(memberLogUpdate, memberLogParam, function (error) {
+                                                if (error) {
+                                                    conn.rollback()
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else
+                                                    console.log("update query is executed.")
+                                            })
+
+                                            let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
+                                            let memberLoginLogParam = [rows[0].member_email, today]
+                                            conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
+                                                if (error) {
+                                                    conn.rollback()
+                                                    console.error(error)
+                                                    res.status(500).json({
+                                                        content: "DB Error"
+                                                    })
+                                                } else {
+                                                    conn.commit()
+                                                    console.log("insert query is executed.")
+                                                }
+                                            })
+
+                                            // TODO 메인 페이지로 이동
+                                            res.status(200).json({
+                                                content: true,
+                                                access_token: accessToken,
+                                                refresh_token: refreshToken
+                                            })
+                                        }).catch(error => {
+                                            console.error(error)
+                                        })
+                                    } else {
+                                        // TODO 로그인 실패(비밀번호가 틀린 경우). 다시 로그인 화면으로 redirect
+                                        res.status(401).json({
+                                            content: false
+                                        })
                                     }
-
-                                    let accessToken
-                                    let refreshToken
-                                    jwt.sign(user).then(result => {
-                                        accessToken = result.access_token
-                                        refreshToken = result.refresh_token
-
-                                        let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
-                                        let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
-                                        let memberLogParam = [today, rows[0].member_email]
-                                        conn.query(memberLogUpdate, memberLogParam, function (error) {
-                                            if (error) {
-                                                conn.rollback()
-                                                console.error(error)
-                                                res.status(500).json({
-                                                    content: "DB Error"
-                                                })
-                                            } else
-                                                console.log("update query is executed.")
-                                        })
-
-                                        let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
-                                        let memberLoginLogParam = [rows[0].member_email, today]
-                                        conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
-                                            if (error) {
-                                                conn.rollback()
-                                                console.error(error)
-                                                res.status(500).json({
-                                                    content: "DB Error"
-                                                })
-                                            } else {
-                                                conn.commit()
-                                                console.log("insert query is executed.")
-                                            }
-                                        })
-
-                                        // TODO 메인 페이지로 이동
-                                        res.status(200).json({
-                                            content: true,
-                                            access_token: accessToken,
-                                            refresh_token: refreshToken
-                                        })
-                                    }).catch(error => {
-                                        console.error(error)
-                                    })
-                                } else {
-                                    // TODO 로그인 실패(비밀번호가 틀린 경우). 다시 로그인 화면으로 redirect
-                                    res.status(401).json({
-                                        content: false
-                                    })
-                                }
-                            }).catch(error => {
-                                console.error(error)
+                                }).catch(error => {
+                                    console.error(error)
+                                })
+                            }
+                        } else {
+                            // TODO 로그인 실패(탈퇴회원인 경우). 다시 로그인 화면으로 redirect
+                            res.status(401).json({
+                                content: false
                             })
                         }
-                    } else {
-                        // TODO 로그인 실퍠(탈퇴회원인 경우). 다시 로그인 화면으로 redirect
+                        conn.release()
+                    }
+                })
+            })
+        }
+    } else {
+        // 최초 로그인 후, 앱이 실행 될 때.
+        if (req.headers.access_token.length === 0 || req.headers.refresh_token.length === 0)
+            res.status(401).json({
+                content: false
+            })
+        else {
+            getConnection((conn) => {
+                // access token 검증.
+                jwt.verify(req.headers.access_token).then(accessToken => {
+                    if (accessToken === TOKEN_INVALID)
                         res.status(401).json({
-                            content: false
+                            content: "invalid token"
+                        })
+
+                    if (accessToken.email === undefined)
+                        res.status(401).json({
+                            content: "invalid token"
+                        })
+
+                    if (accessToken === TOKEN_EXPIRED) {
+                        // access token 만료
+                        // refresh token 검증.
+                        jwt.verify(req.headers.refresh_token).then(refreshToken => {
+                            let checkRefreshTokenSql = "select member_refresh_token from member_refresh_token where member_email = ?"
+                            let checkRefreshTokenParam = [accessToken.email]
+                            conn.beginTransaction()
+                            conn.query(checkRefreshTokenSql, checkRefreshTokenParam, function (error, rows) {
+                                if (error) {
+                                    conn.rollback()
+                                    console.error(error)
+                                    res.status(500).json({
+                                        content: "DB Error"
+                                    })
+                                } else {
+                                    if (rows.length === 0)
+                                        res.status(401).json({
+                                            content: "invalid token"
+                                        })
+                                    else {
+                                        if (rows[0].member_refresh_token !== req.headers.refresh_token) {
+                                            res.status(401).json({
+                                                content: "invalid token"
+                                            })
+                                        } else {
+                                            if (refreshToken === TOKEN_INVALID)
+                                                res.status(401).json({
+                                                    content: "invalid token"
+                                                })
+                                            // access token, refresh token 만료.
+                                            if (refreshToken === TOKEN_EXPIRED) {
+                                                let deleteRefreshTokenSql = "delete from member_refresh_token where member_email = ?"
+                                                let deleteRefreshTokenParam = [accessToken.email]
+                                                conn.query(deleteRefreshTokenSql, deleteRefreshTokenParam, function (error) {
+                                                    if (error) {
+                                                        conn.rollback()
+                                                        console.error(error)
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
+                                                    } else
+                                                        console.log("delete expired refresh token.")
+                                                })
+                                                // sliding session + access token + refresh token
+                                                // refresh token을 재발급 해줌.(만료기간을 늘려줌)
+                                                const user = {
+                                                    email: accessToken.email
+                                                }
+                                                let newAccessToken, newRefreshToken
+                                                jwt.sign(user).then(result => {
+                                                    newAccessToken = result.access_token
+                                                    newRefreshToken = result.refresh_token
+
+                                                    let insertNewRefreshTokenSql = "insert into member_refresh_token(member_email, member_refresh_token) values(?, ?);"
+                                                    let insertNewRefreshTokenParam = [accessToken.email, newRefreshToken]
+                                                    conn.query(insertNewRefreshTokenSql, insertNewRefreshTokenParam, function (error) {
+                                                        if (error) {
+                                                            conn.rollback()
+                                                            console.error(error)
+                                                            res.status(500).json({
+                                                                content: "DB Error"
+                                                            })
+                                                        } else {
+                                                            console.log("Success.")
+                                                        }
+                                                    })
+
+                                                    let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
+                                                    let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
+                                                    let memberLogParam = [today, accessToken.email]
+                                                    conn.query(memberLogUpdate, memberLogParam, function (error) {
+                                                        if (error) {
+                                                            conn.rollback()
+                                                            console.error(error)
+                                                            res.status(500).json({
+                                                                content: "DB Error"
+                                                            })
+                                                        } else
+                                                            console.log("update query is executed.")
+                                                    })
+
+                                                    let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
+                                                    let memberLoginLogParam = [accessToken.email, today]
+                                                    conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
+                                                        if (error) {
+                                                            conn.rollback()
+                                                            console.error(error)
+                                                            res.status(500).json({
+                                                                content: "DB Error"
+                                                            })
+                                                        } else {
+                                                            conn.commit()
+                                                            console.log("insert query is executed.")
+                                                        }
+                                                    })
+
+                                                    // TODO 메인 페이지로 이동
+                                                    res.status(200).json({
+                                                        content: true,
+                                                        access_token: newAccessToken,
+                                                        refresh_token: newRefreshToken
+                                                    })
+                                                })
+                                            }
+                                            // access token 만료, refresh token 유효.
+                                            const user = {
+                                                email: accessToken.email
+                                            }
+                                            jwt.sign(user).then(result => {
+                                                let newAccessToken = result.access_token
+
+                                                let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
+                                                let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
+                                                let memberLogParam = [today, accessToken.email]
+                                                conn.query(memberLogUpdate, memberLogParam, function (error) {
+                                                    if (error) {
+                                                        conn.rollback()
+                                                        console.error(error)
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
+                                                    } else
+                                                        console.log("update query is executed.")
+                                                })
+
+                                                let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
+                                                let memberLoginLogParam = [accessToken.email, today]
+                                                conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
+                                                    if (error) {
+                                                        conn.rollback()
+                                                        console.error(error)
+                                                        res.status(500).json({
+                                                            content: "DB Error"
+                                                        })
+                                                    } else {
+                                                        conn.commit()
+                                                        console.log("insert query is executed.")
+                                                    }
+                                                })
+
+                                                res.status(200).json({
+                                                    content: true,
+                                                    access_token: newAccessToken
+                                                })
+                                            }).catch(error => {
+                                                conn.rollback()
+                                                console.error(error)
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }).catch(error => {
+                            conn.rollback()
+                            console.error(error)
                         })
                     }
-                    conn.release()
-                }
-            })
-        })
-    }
 
+                    // access token 유효.
+                    let memberLogUpdate = "update member_log set member_login_lately = ? where member_log.member_email = ?;"
+                    let today = moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
+                    let memberLogParam = [today, accessToken.email]
+                    conn.beginTransaction()
+                    conn.query(memberLogUpdate, memberLogParam, function (error) {
+                        if (error) {
+                            conn.rollback()
+                            console.error(error)
+                            res.status(500).json({
+                                content: "DB Error"
+                            })
+                        } else
+                            console.log("update query is executed.")
+                    })
+
+                    let memberLoginLogInsert = "insert into member_login_log(member_email, member_login) values(?, ?);"
+                    let memberLoginLogParam = [accessToken.email, today]
+                    conn.query(memberLoginLogInsert, memberLoginLogParam, function (error) {
+                        if (error) {
+                            conn.rollback()
+                            console.error(error)
+                            res.status(500).json({
+                                content: "DB Error"
+                            })
+                        } else {
+                            conn.commit()
+                            console.log("insert query is executed.")
+                        }
+                    })
+
+                    res.status(200).json({
+                        content: true
+                    })
+                })
+            })
+        }
+    }
 })
 
 // 6. 로그아웃
 app.post("/logout", (req, res) => {
-    req.session.destroy()
-    // TODO 로그인 페이지로 이동
-    res.status(200).json({
-        content: true
+    let accessToken = req.headers.access_token
+    jwt.verify(accessToken).then(decoded => {
+        let memberEmail = decoded.email
+
+        let deleteRefreshTokenSql = "delete from member_refresh_token where member_email = ?"
+        let deleteRefreshTokenParam = [memberEmail]
+        getConnection((conn) => {
+            conn.beginTransaction()
+            conn.query(deleteRefreshTokenSql, deleteRefreshTokenParam, function (error) {
+                if (error) {
+                    conn.rollback()
+                    console.error(error)
+                    res.status(500).json({
+                        content: "DB Error"
+                    })
+                } else {
+                    // TODO 로그인 페이지로 이동
+                    conn.commit()
+                    res.status(200).json({
+                        content: true,
+                        access_token: "",
+                        refresh_token: ""
+                    })
+                }
+                conn.release()
+            })
+        })
+    }).catch(error => {
+        console.error(error)
     })
 })
 
@@ -740,8 +1024,7 @@ app.post("/pw/find", (req, res) => {
                                             res.status(401).json({
                                                 content: "Mail error"
                                             })
-                                        }
-                                        else {
+                                        } else {
                                             conn.commit()
                                             // 이메일 인증 코드 전송 완료.
                                             res.status(200).json({
@@ -1046,8 +1329,7 @@ app.patch("/update-detail", (req, res) => {
                                         res.status(500).json({
                                             content: "Session Error"
                                         })
-                                    }
-                                    else {
+                                    } else {
                                         conn.commit()
                                         // TODO 마이페이지로 redirect.
                                         res.status(201).json({

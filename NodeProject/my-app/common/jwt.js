@@ -1,20 +1,24 @@
 const jwt = require("jsonwebtoken")
 const secretKey = require("../config/jwt_config.js").secretKey
+const accessTokenExpiresIN = require("../config/jwt_config.js").accessTokenExpiresIN
+const refreshTokenExpiresIN = require("../config/jwt_config.js").refreshTokenExpiresIN
 const accessTokenOptions = require("../config/jwt_config.js").accessTokenOptions
 const refreshTokenOptions = require("../config/jwt_config.js").refreshTokenOptions
 const TOKEN_EXPIRED = -3
 const TOKEN_INVALID = -2
+const moment = require("moment")
+require("moment-timezone")
+moment.tz.setDefault("Asia/Seoul")
 
 module.exports = {
     sign: async (user) => {
         const accessTokenPayload = {
             email: user.email,
-            expiresIN: "30m"
+            expiresIN: accessTokenExpiresIN
         }
 
         const refreshTokenPayload = {
-            email: user.email,
-            expiresIN: "14d"
+            expiresIN: refreshTokenExpiresIN
         }
 
         const accessToken = jwt.sign(accessTokenPayload, secretKey, accessTokenOptions)
