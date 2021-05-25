@@ -656,8 +656,8 @@ app.post("/login", authenticationUtil, (req, res) => {
                                 content: false
                             })
                         }
-                        conn.release()
                     }
+                    conn.release()
                 })
             })
         }
@@ -695,7 +695,9 @@ app.post("/login", authenticationUtil, (req, res) => {
 // 6. 로그아웃
 app.post("/logout", (req, res) => {
     let accessToken = req.headers.access_token
-    if (!accessToken || accessToken === "")
+    let refreshToken = req.headers.refresh_token
+
+    if (!accessToken || accessToken === "" || !refreshToken || refreshToken === "")
         res.status(401).json({
             content: false
         })
@@ -703,25 +705,50 @@ app.post("/logout", (req, res) => {
         jwt.verify(accessToken).then(decoded => {
             let memberEmail = decoded.email
 
-            let deleteRefreshTokenSql = "delete from member_refresh_token where member_email = ?"
-            let deleteRefreshTokenParam = [memberEmail]
             getConnection((conn) => {
-                conn.beginTransaction()
-                conn.query(deleteRefreshTokenSql, deleteRefreshTokenParam, function (error) {
+                let selectRefreshTokenSql = "select member_refresh_token from member_refresh_token where member_email = ?;"
+                let selectRefreshTokenParam = [memberEmail]
+
+                conn.query(selectRefreshTokenSql, selectRefreshTokenParam, function (error, rows) {
                     if (error) {
-                        conn.rollback()
                         console.error(error)
                         res.status(500).json({
                             content: "DB Error"
                         })
                     } else {
-                        // TODO 로그인 페이지로 이동
-                        conn.commit()
-                        res.status(200).json({
-                            content: true,
-                            access_token: "",
-                            refresh_token: ""
-                        })
+                        if (rows.length === 0)
+                            res.status(401).json({
+                                content: false
+                            })
+                        else {
+                            if (refreshToken !== rows[0].member_refresh_token)
+                                res.status(401).json({
+                                    content: "invalid token"
+                                })
+                            else {
+                                let deleteRefreshTokenSql = "delete from member_refresh_token where member_email = ?"
+                                let deleteRefreshTokenParam = [memberEmail]
+
+                                conn.beginTransaction()
+                                conn.query(deleteRefreshTokenSql, deleteRefreshTokenParam, function (error) {
+                                    if (error) {
+                                        conn.rollback()
+                                        console.error(error)
+                                        res.status(500).json({
+                                            content: "DB Error"
+                                        })
+                                    } else {
+                                        // TODO 로그인 페이지로 이동
+                                        conn.commit()
+                                        res.status(200).json({
+                                            content: true,
+                                            access_token: "",
+                                            refresh_token: ""
+                                        })
+                                    }
+                                })
+                            }
+                        }
                     }
                     conn.release()
                 })

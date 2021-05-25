@@ -1,7 +1,5 @@
 const jwt = require("jsonwebtoken")
 const secretKey = require("../config/jwt_config.js").secretKey
-const accessTokenExpiresIN = require("../config/jwt_config.js").accessTokenExpiresIN
-const refreshTokenExpiresIN = require("../config/jwt_config.js").refreshTokenExpiresIN
 const accessTokenOptions = require("../config/jwt_config.js").accessTokenOptions
 const refreshTokenOptions = require("../config/jwt_config.js").refreshTokenOptions
 const TOKEN_EXPIRED = -3
@@ -14,12 +12,9 @@ module.exports = {
     sign: async (user) => {
         const accessTokenPayload = {
             email: user.email,
-            expiresIN: accessTokenExpiresIN
         }
 
-        const refreshTokenPayload = {
-            expiresIN: refreshTokenExpiresIN
-        }
+        const refreshTokenPayload = {}
 
         const accessToken = jwt.sign(accessTokenPayload, secretKey, accessTokenOptions)
         const refreshToken = jwt.sign(refreshTokenPayload, secretKey, refreshTokenOptions)
